@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDV Banca de Jornal</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #121017;
+      --panel: #1a1623;
+      --panel-2: #211b2d;
+      --panel-3: #2b223a;
+      --ink: #f4f1ff;
+      --muted: #b8b0cd;
+      --purple: #7f4dff;
+      --purple-2: #a45bff;
+      --purple-3: #4c2ca7;
+      --green: #1fb36a;
+      --green-2: #159257;
+      --red: #e15b64;
+      --yellow: #f5bf42;
+      --line: rgba(255,255,255,0.09);
+      --shadow: 0 18px 50px rgba(0,0,0,0.32);
+      --radius: 22px;
+      --radius-sm: 14px;
+      --font: "Segoe UI", Tahoma, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(127,77,255,0.28), transparent 28%),
+        radial-gradient(circle at right center, rgba(31,179,106,0.16), transparent 22%),
+        linear-gradient(180deg, #0e0c14 0%, #15111d 100%);
+      overflow-x: hidden;
+    }
+
+    .app {
+      min-height: 100vh;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 270px minmax(0, 1fr) 360px;
+      gap: 16px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, #09080d 0%, #110f15 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .brand {
+      padding: 16px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(127,77,255,0.22), rgba(127,77,255,0.08));
+      border: 1px solid rgba(127,77,255,0.25);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.12rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      line-height: 1.3;
+    }
+
+    .brand p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .action-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .action-btn,
+    .pill-btn,
+    .category-btn,
+    .primary-btn,
+    .success-btn,
+    .danger-btn,
+    .ghost-btn {
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      color: #fff;
+      min-height: 54px;
+      border-radius: 16px;
+      font-size: 1rem;
+      transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      letter-spacing: 0.01em;
+    }
+
+    .action-btn:hover,
+    .pill-btn:hover,
+    .category-btn:hover,
+    .primary-btn:hover,
+    .success-btn:hover,
+    .danger-btn:hover,
+    .ghost-btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
+
+    .action-btn {
+      background: linear-gradient(135deg, #222029, #111116);
+      border: 1px solid rgba(255,255,255,0.07);
+      text-align: left;
+      padding: 14px 16px;
+    }
+
+    .action-btn small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .topbar {
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .topbar-title h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .topbar-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .topbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .pill-btn {
+      min-height: 44px;
+      padding: 0 16px;
+      background: linear-gradient(135deg, rgba(127,77,255,0.9), rgba(164,91,255,0.9));
+      box-shadow: 0 10px 24px rgba(127,77,255,0.28);
+    }
+
+    .pill-btn.secondary {
+      background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+      box-shadow: none;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .catalog {
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .categories {
+      padding: 16px;
+    }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .category-btn {
+      padding: 14px 14px;
+      text-align: left;
+      background: linear-gradient(135deg, var(--purple-3), var(--purple), var(--purple-2));
+      border: 1px solid rgba(255,255,255,0.1);
+      min-height: 62px;
+      box-shadow: 0 12px 22px rgba(79, 47, 164, 0.24);
+    }
+
+    .category-btn.active {
+      outline: 2px solid rgba(255,255,255,0.22);
+      transform: translateY(-1px) scale(1.01);
+    }
+
+    .category-btn span {
+      display: block;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.82);
+      margin-bottom: 4px;
+    }
+
+    .products-panel {
+      padding: 16px;
+      min-height: 360px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .section-header h3,
+    .section-header h4 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .section-header p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .search-input,
+    .field,
+    .select,
+    .date-input,
+    .text-area {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      color: var(--ink);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .search-input::placeholder,
+    .field::placeholder,
+    .text-area::placeholder { color: rgba(244,241,255,0.45); }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }
+
+    .product-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025));
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .product-card h4 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.25;
+      min-height: 2.5em;
+    }
+
+    .meta-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      width: fit-content;
+    }
+
+    .badge.green { background: rgba(31,179,106,0.18); color: #76f0b2; }
+    .badge.yellow { background: rgba(245,191,66,0.16); color: #ffd977; }
+    .badge.red { background: rgba(225,91,100,0.18); color: #ff9aa1; }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--purple), var(--purple-2));
+      min-height: 46px;
+      width: 100%;
+    }
+
+    .success-btn {
+      background: linear-gradient(135deg, var(--green), var(--green-2));
+      min-height: 50px;
+      width: 100%;
+    }
+
+    .danger-btn {
+      background: linear-gradient(135deg, #d9545e, #a83842);
+      min-height: 42px;
+      padding: 0 12px;
+    }
+
+    .ghost-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.09);
+      min-height: 42px;
+      padding: 0 14px;
+    }
+
+    .cart {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 16px;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .cart-table-wrap {
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.03);
+      min-height: 240px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 320px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.95rem;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(20,17,28,0.96);
+      z-index: 1;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .cart-total {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(127,77,255,0.16), rgba(31,179,106,0.08));
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .cart-total strong { font-size: 1.2rem; }
+
+    .cart-actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .cart-empty {
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(7,6,11,0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+      backdrop-filter: blur(6px);
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      width: min(980px, 100%);
+      max-height: min(92vh, 960px);
+      overflow: auto;
+      border-radius: 24px;
+      background: linear-gradient(180deg, #181421, #121019);
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.46);
+    }
+
+    .modal.small { width: min(640px, 100%); }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 18px 0;
+    }
+
+    .modal-body {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .modal-title h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .modal-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .close-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--ink);
+      min-width: 42px;
+      min-height: 42px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .form-grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .field-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field-label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .compact-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .list-item {
+      display: grid;
+      grid-template-columns: 1.5fr 0.6fr 0.7fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .list-item .name { font-weight: 700; }
+
+    .list-item .muted { color: var(--muted); font-size: 0.88rem; }
+
+    .report-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .report-card {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .report-card .label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .report-card .value {
+      font-size: 1.3rem;
+      font-weight: 800;
+    }
+
+    .report-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .report-box {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      min-height: 220px;
+    }
+
+    .report-box h4 { margin: 0 0 12px; }
+
+    .ranking-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .ranking-item:last-child { border-bottom: none; }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 80;
+      background: rgba(19,16,27,0.94);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--ink);
+      padding: 14px 16px;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      display: none;
+      max-width: 340px;
+    }
+
+    .toast.show { display: block; }
+
+    .helper {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    #printArea {
+      display: none;
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea {
+        display: block;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: #fff;
+        color: #000;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 1240px) {
+      .app { grid-template-columns: 250px minmax(0, 1fr); }
+      .cart { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 880px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { order: 1; }
+      .main { order: 2; }
+      .cart { order: 3; }
+      .report-grid,
+      .report-columns,
+      .form-grid,
+      .form-grid.three,
+      .list-item { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel sidebar">
+      <div class="brand">
+        <h1 id="brandTitle">PDV da Banca</h1>
+        <p>Venda rápida, estoque e relatório em um único painel.</p>
+      </div>
+
+      <div class="action-list">
+        <button class="action-btn" id="btnPrint">
+          IMPRESSÃO
+          <small>Imprime o cupom da venda atual</small>
+        </button>
+        <button class="action-btn" id="btnAddProduct">
+          CADASTRAR PRODUTO
+          <small>Abre modal para novo cadastro</small>
+        </button>
+        <button class="action-btn" id="btnRemoveProduct">
+          REMOVER PRODUTO
+          <small>Buscar e excluir produto do estoque</small>
+        </button>
+        <button class="action-btn" id="btnChangePrice">
+          ALTERAR PREÇO
+          <small>Localizar e atualizar preço de venda</small>
+        </button>
+        <button class="action-btn" id="btnLowStock">
+          LISTA DE COMPRAS
+          <small>Mostra produtos com estoque baixo</small>
+        </button>
+        <button class="action-btn" id="btnReport">
+          GERAR RELATÓRIO
+          <small>Vendas do dia e filtro por período</small>
+        </button>
+      </div>
+
+      <button class="pill-btn secondary" id="btnSettings">CONFIGURAÇÕES PIX / BANCA</button>
+    </aside>
+
+    <main class="main">
+      <section class="panel topbar">
+        <div class="topbar-title">
+          <h2>Operação de venda</h2>
+          <p id="statusLine">Selecione uma categoria, adicione produtos ao carrinho e feche a venda.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="pill-btn secondary" id="btnClearCart">Limpar carrinho</button>
+          <button class="pill-btn" id="btnOpenSettingsQuick">Ajustar dados da banca</button>
+        </div>
+      </section>
+
+      <section class="panel categories">
+        <div class="section-header">
+          <div>
+            <h3>Categorias</h3>
+            <p>Clique para exibir os produtos da categoria abaixo.</p>
+          </div>
+        </div>
+        <div class="categories-grid" id="categoriesGrid"></div>
+      </section>
+
+      <section class="panel products-panel">
+        <div class="section-header">
+          <div>
+            <h3 id="productsTitle">Produtos</h3>
+            <p id="productsSubtitle">Escolha uma categoria para começar.</p>
+          </div>
+          <div style="min-width: 260px; max-width: 360px; width: 100%;">
+            <input id="productFilter" class="search-input" placeholder="Buscar produto na categoria..." />
+          </div>
+        </div>
+        <div class="products-grid" id="productsGrid"></div>
+      </section>
+    </main>
+
+    <aside class="panel cart">
+      <div class="section-header" style="margin-bottom:0;">
+        <div>
+          <h3>Carrinho de venda</h3>
+          <p>Produto, subtotal e total geral.</p>
+        </div>
+      </div>
+
+      <div class="cart-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Valor</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="cartBody"></tbody>
+        </table>
+        <div class="cart-empty" id="cartEmpty">Carrinho vazio.</div>
+      </div>
+
+      <div class="cart-total">
+        <span>Total geral</span>
+        <strong id="cartTotal">R$ 0,00</strong>
+      </div>
+
+      <div class="cart-actions">
+        <button class="primary-btn" id="btnPix">GERAR QR CODE PIX</button>
+        <button class="success-btn" id="btnCloseSale">FECHAR VENDA</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay" aria-hidden="true">
+    <div class="modal" id="modalBox">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h3 id="modalTitle">Modal</h3>
+          <p id="modalSubtitle">Detalhes</p>
+        </div>
+        <button class="close-btn" id="modalClose" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div id="printArea"></div>
+
+  <script>
+    const STORAGE_KEYS = {
+      products: "pdv_banca_products",
+      sales: "pdv_banca_sales",
+      config: "pdv_banca_config"
+    };
+
+    const CATEGORIES = [
+      "BEBIDAS NÃO ALCOÓLICAS",
+      "BEBIDAS ALCOÓLICAS / ENERGÉTICO",
+      "SALGADOS",
+      "DOCES",
+      "PAPELARIA",
+      "ACESSÓRIOS ELETRÔNICOS",
+      "ÁLBUNS / FIGURINHAS",
+      "CAÇA-PALAVRAS / CRUZADAS / ETC",
+      "CIGARRO",
+      "REVISTAS",
+      "LOTERIA",
+      "OUTRO"
+    ];
+
+    const seedProducts = [
+      { id: crypto.randomUUID(), name: "Água mineral 500ml", category: CATEGORIES[0], price: 4.5, stock: 24, minStock: 6 },
+      { id: crypto.randomUUID(), name: "Refrigerante lata", category: CATEGORIES[0], price: 6.9, stock: 18, minStock: 5 },
+      { id: crypto.randomUUID(), name: "Energético 250ml", category: CATEGORIES[1], price: 9.9, stock: 12, minStock: 4 },
+      { id: crypto.randomUUID(), name: "Cerveja lata", category: CATEGORIES[1], price: 7.5, stock: 30, minStock: 8 },
+      { id: crypto.randomUUID(), name: "Salgado assado", category: CATEGORIES[2], price: 7.0, stock: 14, minStock: 4 },
+      { id: crypto.randomUUID(), name: "Pão de queijo", category: CATEGORIES[2], price: 5.5, stock: 20, minStock: 5 },
+      { id: crypto.randomUUID(), name: "Chocolate barra", category: CATEGORIES[3], price: 8.0, stock: 16, minStock: 5 },
+      { id: crypto.randomUUID(), name: "Bala sortida", category: CATEGORIES[3], price: 2.0, stock: 100, minStock: 20 },
+      { id: crypto.randomUUID(), name: "Caneta esferográfica", category: CATEGORIES[4], price: 4.0, stock: 40, minStock: 10 },
+      { id: crypto.randomUUID(), name: "Caderno pequeno", category: CATEGORIES[4], price: 12.0, stock: 15, minStock: 4 },
+      { id: crypto.randomUUID(), name: "Carregador USB", category: CATEGORIES[5], price: 39.9, stock: 8, minStock: 3 },
+      { id: crypto.randomUUID(), name: "Fone de ouvido", category: CATEGORIES[5], price: 49.9, stock: 9, minStock: 3 },
+      { id: crypto.randomUUID(), name: "Álbum de figurinha", category: CATEGORIES[6], price: 19.9, stock: 10, minStock: 3 },
+      { id: crypto.randomUUID(), name: "Envelope de figurinhas", category: CATEGORIES[6], price: 5.0, stock: 35, minStock: 10 },
+      { id: crypto.randomUUID(), name: "Caça-palavras", category: CATEGORIES[7], price: 12.9, stock: 14, minStock: 4 },
+      { id: crypto.randomUUID(), name: "Palavras cruzadas", category: CATEGORIES[7], price: 11.9, stock: 14, minStock: 4 },
+      { id: crypto.randomUUID(), name: "Cigarro unidade", category: CATEGORIES[8], price: 1.0, stock: 50, minStock: 12 },
+      { id: crypto.randomUUID(), name: "Revista semanal", category: CATEGORIES[9], price: 16.9, stock: 17, minStock: 5 },
+      { id: crypto.randomUUID(), name: "Jogo lotérico", category: CATEGORIES[10], price: 3.5, stock: 60, minStock: 15 },
+      { id: crypto.randomUUID(), name: "Produto diverso", category: CATEGORIES[11], price: 10.0, stock: 20, minStock: 5 }
+    ];
+
+    const defaultConfig = {
+      bankName: "Banca Central",
+      pixKey: "",
+      city: "SAO PAULO",
+      merchantName: "BANCA CENTRAL"
+    };
+
+    const state = {
+      products: loadJSON(STORAGE_KEYS.products, []),
+      sales: loadJSON(STORAGE_KEYS.sales, []),
+      config: { ...defaultConfig, ...loadJSON(STORAGE_KEYS.config, {}) },
+      cart: [],
+      activeCategory: CATEGORIES[0],
+      productFilter: "",
+      modalContext: null,
+      qrCodeInstance: null
+    };
+
+    if (state.products.length === 0) {
+      state.products = seedProducts;
+      persistProducts();
+    }
+
+    const els = {
+      brandTitle: document.getElementById("brandTitle"),
+      statusLine: document.getElementById("statusLine"),
+      categoriesGrid: document.getElementById("categoriesGrid"),
+      productsGrid: document.getElementById("productsGrid"),
+      productsTitle: document.getElementById("productsTitle"),
+      productsSubtitle: document.getElementById("productsSubtitle"),
+      productFilter: document.getElementById("productFilter"),
+      cartBody: document.getElementById("cartBody"),
+      cartEmpty: document.getElementById("cartEmpty"),
+      cartTotal: document.getElementById("cartTotal"),
+      modalOverlay: document.getElementById("modalOverlay"),
+      modalBox: document.getElementById("modalBox"),
+      modalTitle: document.getElementById("modalTitle"),
+      modalSubtitle: document.getElementById("modalSubtitle"),
+      modalBody: document.getElementById("modalBody"),
+      toast: document.getElementById("toast"),
+      printArea: document.getElementById("printArea")
+    };
+
+    bindUI();
+    renderAll();
+
+    function bindUI() {
+      document.getElementById("btnPrint").addEventListener("click", printCurrentSale);
+      document.getElementById("btnAddProduct").addEventListener("click", () => openAddProductModal());
+      document.getElementById("btnRemoveProduct").addEventListener("click", () => openRemoveProductModal());
+      document.getElementById("btnChangePrice").addEventListener("click", () => openChangePriceModal());
+      document.getElementById("btnLowStock").addEventListener("click", () => openLowStockModal());
+      document.getElementById("btnReport").addEventListener("click", () => openReportModal());
+      document.getElementById("btnSettings").addEventListener("click", () => openSettingsModal());
+      document.getElementById("btnOpenSettingsQuick").addEventListener("click", () => openSettingsModal());
+      document.getElementById("btnClearCart").addEventListener("click", clearCart);
+      document.getElementById("btnPix").addEventListener("click", openPixModal);
+      document.getElementById("btnCloseSale").addEventListener("click", closeSale);
+      els.modalOverlay.addEventListener("click", (event) => {
+        if (event.target === els.modalOverlay) closeModal();
+      });
+      document.getElementById("modalClose").addEventListener("click", closeModal);
+      els.productFilter.addEventListener("input", (event) => {
+        state.productFilter = event.target.value.trim().toLowerCase();
+        renderProducts();
+      });
+    }
+
+    function loadJSON(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function persistProducts() {
+      localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(state.products));
+    }
+
+    function persistSales() {
+      localStorage.setItem(STORAGE_KEYS.sales, JSON.stringify(state.sales));
+    }
+
+    function persistConfig() {
+      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(state.config));
+    }
+
+    function money(value) {
+      return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0));
+    }
+
+    function toIsoDate(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      return date.toISOString();
+    }
+
+    function todayDateInputValue() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function formatDateTime(value) {
+      return new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short"
+      }).format(new Date(value));
+    }
+
+    function normalizeText(text) {
+      return String(text || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => els.toast.classList.remove("show"), 2600);
+    }
+
+    function openModal(title, subtitle, bodyNode) {
+      els.modalTitle.textContent = title;
+      els.modalSubtitle.textContent = subtitle;
+      els.modalBody.innerHTML = "";
+      if (Array.isArray(bodyNode)) {
+        bodyNode.forEach((node) => els.modalBody.appendChild(node));
+      } else {
+        els.modalBody.appendChild(bodyNode);
+      }
+      els.modalOverlay.classList.add("open");
+      els.modalOverlay.setAttribute("aria-hidden", "false");
+    }
+
+    function closeModal() {
+      els.modalOverlay.classList.remove("open");
+      els.modalOverlay.setAttribute("aria-hidden", "true");
+      els.modalBody.innerHTML = "";
+      state.modalContext = null;
+      if (state.qrCodeInstance) {
+        state.qrCodeInstance.clear();
+        state.qrCodeInstance = null;
+      }
+    }
+
+    function getProduct(id) {
+      return state.products.find((product) => product.id === id);
+    }
+
+    function getCartItem(productId) {
+      return state.cart.find((item) => item.productId === productId);
+    }
+
+    function availableStock(product) {
+      const inCart = getCartItem(product.id)?.quantity || 0;
+      return Math.max(0, Number(product.stock) - inCart);
+    }
+
+    function cartTotal() {
+      return state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    }
+
+    function cartItemsExpanded() {
+      return state.cart.map((item) => ({
+        ...item,
+        subtotal: item.price * item.quantity,
+        name: getProduct(item.productId)?.name || item.name
+      }));
+    }
+
+    function renderAll() {
+      els.brandTitle.textContent = state.config.bankName || "PDV da Banca";
+      document.title = `${state.config.bankName || "PDV"} - PDV Banca`;
+      document.getElementById("statusLine").textContent = `Banca: ${state.config.bankName || "sem nome"} | Estoque e vendas salvos no navegador.`;
+      renderCategories();
+      renderProducts();
+      renderCart();
+    }
+
+    function renderCategories() {
+      els.categoriesGrid.innerHTML = CATEGORIES.map((category, index) => `
+        <button class="category-btn ${state.activeCategory === category ? "active" : ""}" data-category="${escapeHtml(category)}">
+          <span>${String(index + 1).padStart(2, "0")}</span>
+          ${escapeHtml(category)}
+        </button>
+      `).join("");
+
+      els.categoriesGrid.querySelectorAll(".category-btn").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.activeCategory = button.dataset.category;
+          renderCategories();
+          renderProducts();
+        });
+      });
+    }
+
+    function renderProducts() {
+      const products = state.products.filter((product) => product.category === state.activeCategory);
+      const filtered = products.filter((product) => {
+        const text = normalizeText(`${product.name} ${product.category}`);
+        return text.includes(state.productFilter);
+      });
+
+      els.productsTitle.textContent = state.activeCategory;
+      els.productsSubtitle.textContent = `${filtered.length} produto(s) exibido(s) nesta categoria.`;
+
+      if (filtered.length === 0) {
+        els.productsGrid.innerHTML = `
+          <div class="product-card" style="grid-column:1/-1;">
+            <h4>Nenhum produto encontrado</h4>
+            <div class="helper">Cadastre um novo item ou limpe o filtro de busca.</div>
+          </div>
+        `;
+        return;
+      }
+
+      els.productsGrid.innerHTML = filtered.map((product) => {
+        const stock = availableStock(product);
+        const stockClass = stock <= 0 ? "red" : stock <= product.minStock ? "yellow" : "green";
+        return `
+          <article class="product-card">
+            <div class="badge ${stockClass}">Estoque: ${stock}</div>
+            <h4>${escapeHtml(product.name)}</h4>
+            <div class="meta-line"><span>Preço</span><strong>${money(product.price)}</strong></div>
+            <div class="meta-line"><span>Categoria</span><span>${escapeHtml(product.category)}</span></div>
+            <button class="primary-btn" data-add="${product.id}">+ Adicionar</button>
+          </article>
+        `;
+      }).join("");
+
+      els.productsGrid.querySelectorAll("[data-add]").forEach((button) => {
+        button.addEventListener("click", () => addToCart(button.dataset.add));
+      });
+    }
+
+    function renderCart() {
+      const items = cartItemsExpanded();
+      els.cartEmpty.style.display = items.length === 0 ? "block" : "none";
+      els.cartBody.innerHTML = items.map((item) => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(item.name)}</strong><br />
+            <span class="helper">Qtd.: ${item.quantity}</span>
+          </td>
+          <td>${money(item.subtotal)}</td>
+          <td><button class="danger-btn" data-remove="${item.productId}">Remover</button></td>
+        </tr>
+      `).join("");
+      els.cartTotal.textContent = money(cartTotal());
+
+      els.cartBody.querySelectorAll("[data-remove]").forEach((button) => {
+        button.addEventListener("click", () => removeFromCart(button.dataset.remove));
+      });
+    }
+
+    function addToCart(productId) {
+      const product = getProduct(productId);
+      if (!product) return;
+      const cartItem = getCartItem(productId);
+      const stockLeft = availableStock(product);
+
+      if (stockLeft <= 0) {
+        showToast("Estoque indisponível para esse produto.");
+        return;
+      }
+
+      if (cartItem) {
+        cartItem.quantity += 1;
+      } else {
+        state.cart.push({
+          productId: product.id,
+          name: product.name,
+          price: Number(product.price),
+          quantity: 1
+        });
+      }
+
+      renderCart();
+      renderProducts();
+      showToast(`${product.name} adicionado ao carrinho.`);
+    }
+
+    function removeFromCart(productId) {
+      const index = state.cart.findIndex((item) => item.productId === productId);
+      if (index >= 0) {
+        const item = state.cart[index];
+        item.quantity -= 1;
+        if (item.quantity <= 0) state.cart.splice(index, 1);
+        renderCart();
+        renderProducts();
+      }
+    }
+
+    function clearCart() {
+      state.cart = [];
+      renderCart();
+      renderProducts();
+      showToast("Carrinho limpo.");
+    }
+
+    function closeSale() {
+      if (state.cart.length === 0) {
+        showToast("Adicione produtos antes de fechar a venda.");
+        return;
+      }
+
+      for (const item of state.cart) {
+        const product = getProduct(item.productId);
+        if (!product) {
+          showToast("Um item do carrinho não existe mais no estoque.");
+          return;
+        }
+        if (product.stock < item.quantity) {
+          showToast(`Estoque insuficiente para ${product.name}.`);
+          return;
+        }
+      }
+
+      const sale = {
+        id: crypto.randomUUID(),
+        date: toIsoDate(new Date()),
+        items: state.cart.map((item) => ({ ...item })),
+        total: cartTotal()
+      };
+
+      state.cart.forEach((item) => {
+        const product = getProduct(item.productId);
+        product.stock -= item.quantity;
+      });
+
+      state.sales.push(sale);
+      persistProducts();
+      persistSales();
+      clearCart();
+      renderAll();
+      showToast("Venda finalizada e salva no histórico.");
+    }
+
+    function printCurrentSale() {
+      if (state.cart.length === 0) {
+        showToast("Nenhum item no carrinho para imprimir.");
+        return;
+      }
+
+      const items = cartItemsExpanded();
+      const lines = items.map((item) => `
+        <tr>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${item.quantity}</td>
+          <td>${money(item.price)}</td>
+          <td>${money(item.subtotal)}</td>
+        </tr>
+      `).join("");
+
+      els.printArea.innerHTML = `
+        <div style="max-width: 320px; font-family: Arial, sans-serif; font-size: 14px;">
+          <h2 style="margin:0 0 6px;">${escapeHtml(state.config.bankName || "PDV da Banca")}</h2>
+          <div style="margin-bottom:10px;">Cupom da venda atual</div>
+          <div style="margin-bottom:10px;">Data: ${formatDateTime(new Date())}</div>
+          <table style="width:100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left; border-bottom:1px solid #000;">Produto</th>
+                <th style="text-align:left; border-bottom:1px solid #000;">Qtd.</th>
+                <th style="text-align:left; border-bottom:1px solid #000;">Valor</th>
+                <th style="text-align:left; border-bottom:1px solid #000;">Subt.</th>
+              </tr>
+            </thead>
+            <tbody>${lines}</tbody>
+          </table>
+          <h3 style="margin-top:12px;">Total: ${money(cartTotal())}</h3>
+        </div>
+      `;
+      window.print();
+    }
+
+    function openAddProductModal() {
+      const form = document.createElement("form");
+      form.className = "stack";
+      form.innerHTML = `
+        <div class="form-grid">
+          <div class="field-group">
+            <label class="field-label">Nome do produto</label>
+            <input class="field" name="name" required placeholder="Ex.: Revista de esporte" />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Categoria</label>
+            <select class="select" name="category" required>${CATEGORIES.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("")}</select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Preço de venda (R$)</label>
+            <input class="field" name="price" type="number" min="0" step="0.01" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Quantidade em estoque</label>
+            <input class="field" name="stock" type="number" min="0" step="1" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Estoque mínimo</label>
+            <input class="field" name="minStock" type="number" min="0" step="1" required />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" id="cancelAdd">Cancelar</button>
+          <button type="submit" class="success-btn" style="width:auto; padding:0 18px;">SALVAR</button>
+        </div>
+      `;
+
+      openModal("Cadastrar produto", "Adicione um novo item ao estoque e já deixe disponível para venda.", form);
+      form.querySelector("#cancelAdd").addEventListener("click", closeModal);
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        const product = {
+          id: crypto.randomUUID(),
+          name: data.name.trim(),
+          category: data.category,
+          price: Number(data.price),
+          stock: Number(data.stock),
+          minStock: Number(data.minStock)
+        };
+
+        state.products.push(product);
+        persistProducts();
+        renderAll();
+        closeModal();
+        showToast("Produto cadastrado com sucesso.");
+      });
+    }
+
+    function openRemoveProductModal() {
+      const wrap = document.createElement("div");
+      wrap.className = "stack";
+      wrap.innerHTML = `
+        <input class="search-input" id="removeSearch" placeholder="Buscar produto para remover..." />
+        <div class="compact-list" id="removeList"></div>
+      `;
+
+      openModal("Remover produto", "Localize o produto e confirme a exclusão do cadastro.", wrap);
+      const search = wrap.querySelector("#removeSearch");
+      const list = wrap.querySelector("#removeList");
+
+      const renderList = () => {
+        const term = normalizeText(search.value);
+        const items = state.products.filter((product) => normalizeText(`${product.name} ${product.category}`).includes(term));
+        list.innerHTML = items.length ? items.map((product) => `
+          <div class="list-item">
+            <div>
+              <div class="name">${escapeHtml(product.name)}</div>
+              <div class="muted">${escapeHtml(product.category)}</div>
+            </div>
+            <div>${money(product.price)}</div>
+            <div>Estoque: ${product.stock}</div>
+            <button class="danger-btn" data-del="${product.id}">REMOVER</button>
+          </div>
+        `).join("") : `<div class="helper">Nenhum produto encontrado.</div>`;
+
+        list.querySelectorAll("[data-del]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const index = state.products.findIndex((product) => product.id === button.dataset.del);
+            if (index >= 0 && confirm(`Remover ${state.products[index].name}?`)) {
+              state.products.splice(index, 1);
+              persistProducts();
+              renderAll();
+              renderList();
+              showToast("Produto removido.");
+            }
+          });
+        });
+      };
+
+      search.addEventListener("input", renderList);
+      renderList();
+    }
+
+    function openChangePriceModal() {
+      const wrap = document.createElement("div");
+      wrap.className = "stack";
+      wrap.innerHTML = `
+        <input class="search-input" id="priceSearch" placeholder="Buscar produto para alterar preço..." />
+        <div class="compact-list" id="priceList"></div>
+      `;
+
+      openModal("Alterar preço", "Atualize o valor de venda do produto selecionado.", wrap);
+      const search = wrap.querySelector("#priceSearch");
+      const list = wrap.querySelector("#priceList");
+
+      const renderList = () => {
+        const term = normalizeText(search.value);
+        const items = state.products.filter((product) => normalizeText(`${product.name} ${product.category}`).includes(term));
+
+        list.innerHTML = items.length ? items.map((product) => `
+          <div class="list-item" style="grid-template-columns: 1.3fr 0.7fr 0.7fr 0.9fr;">
+            <div>
+              <div class="name">${escapeHtml(product.name)}</div>
+              <div class="muted">${escapeHtml(product.category)}</div>
+            </div>
+            <div>${money(product.price)}</div>
+            <input class="field" type="number" min="0" step="0.01" value="${product.price}" data-price-input="${product.id}" />
+            <button class="primary-btn" data-price-save="${product.id}">SALVAR</button>
+          </div>
+        `).join("") : `<div class="helper">Nenhum produto encontrado.</div>`;
+
+        list.querySelectorAll("[data-price-save]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const input = list.querySelector(`[data-price-input="${button.dataset.priceSave}"]`);
+            const product = getProduct(button.dataset.priceSave);
+            if (!product) return;
+            product.price = Number(input.value);
+            persistProducts();
+            renderAll();
+            renderList();
+            showToast("Preço atualizado.");
+          });
+        });
+      };
+
+      search.addEventListener("input", renderList);
+      renderList();
+    }
+
+    function openLowStockModal() {
+      const lowStock = state.products
+        .filter((product) => product.stock <= product.minStock)
+        .sort((a, b) => a.stock - b.stock);
+
+      const node = document.createElement("div");
+      node.className = "stack";
+      node.innerHTML = `
+        <div class="helper">Produtos com estoque igual ou abaixo do mínimo cadastrado.</div>
+        <div class="compact-list">
+          ${lowStock.length ? lowStock.map((product) => `
+            <div class="list-item">
+              <div>
+                <div class="name">${escapeHtml(product.name)}</div>
+                <div class="muted">${escapeHtml(product.category)}</div>
+              </div>
+              <div>Atual: ${product.stock}</div>
+              <div>Mín.: ${product.minStock}</div>
+              <div>${money(product.price)}</div>
+            </div>
+          `).join("") : `<div class="helper">Nenhum produto em nível crítico de estoque.</div>`}
+        </div>
+      `;
+
+      openModal("Lista de compras", "Acompanhe os itens que precisam ser repostos.", node);
+    }
+
+    function openSettingsModal() {
+      const form = document.createElement("form");
+      form.className = "stack";
+      form.innerHTML = `
+        <div class="form-grid">
+          <div class="field-group">
+            <label class="field-label">Nome da banca</label>
+            <input class="field" name="bankName" value="${escapeHtml(state.config.bankName || "")}" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Nome do recebedor PIX</label>
+            <input class="field" name="merchantName" value="${escapeHtml(state.config.merchantName || "")}" maxlength="25" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Cidade</label>
+            <input class="field" name="city" value="${escapeHtml(state.config.city || "")}" maxlength="15" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Chave PIX</label>
+            <input class="field" name="pixKey" value="${escapeHtml(state.config.pixKey || "")}" placeholder="cpf, email, telefone ou chave aleatória" required />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" id="cancelSettings">Cancelar</button>
+          <button type="submit" class="success-btn" style="width:auto; padding:0 18px;">SALVAR</button>
+        </div>
+      `;
+
+      openModal("Configurações", "Defina o nome da banca e a chave PIX usada no QR Code.", form);
+      form.querySelector("#cancelSettings").addEventListener("click", closeModal);
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        state.config = {
+          bankName: data.bankName.trim(),
+          merchantName: data.merchantName.trim().toUpperCase().slice(0, 25),
+          city: data.city.trim().toUpperCase().slice(0, 15),
+          pixKey: data.pixKey.trim(),
+        };
+        persistConfig();
+        renderAll();
+        closeModal();
+        showToast("Configurações salvas.");
+      });
+    }
+
+    function openPixModal() {
+      if (state.cart.length === 0) {
+        showToast("Adicione itens ao carrinho para gerar o PIX.");
+        return;
+      }
+
+      if (!state.config.pixKey) {
+        showToast("Configure a chave PIX antes de gerar o QR Code.");
+        openSettingsModal();
+        return;
+      }
+
+      const wrap = document.createElement("div");
+      wrap.className = "stack";
+      wrap.innerHTML = `
+        <div class="report-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+          <div class="report-card"><div class="label">Total da venda</div><div class="value">${money(cartTotal())}</div></div>
+          <div class="report-card"><div class="label">Banca</div><div class="value" style="font-size:1rem;">${escapeHtml(state.config.bankName || "")}</div></div>
+          <div class="report-card"><div class="label">PIX</div><div class="value" style="font-size:1rem;">${escapeHtml(state.config.pixKey)}</div></div>
+        </div>
+        <div style="display:grid; grid-template-columns: 320px 1fr; gap: 16px; align-items:start;">
+          <div class="report-box" style="min-height: 320px; display:grid; place-items:center;">
+            <div id="qrcodeArea"></div>
+          </div>
+          <div class="report-box">
+            <h4>PIX copia e cola</h4>
+            <textarea class="text-area" id="pixPayload" rows="10" readonly></textarea>
+            <div class="modal-actions" style="margin-top:12px; justify-content:flex-start;">
+              <button class="primary-btn" id="copyPix" type="button" style="width:auto; padding:0 16px;">COPIAR</button>
+              <button class="ghost-btn" id="closePix" type="button">Fechar</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      openModal("Gerar QR Code PIX", "O QR Code é montado com o valor total do carrinho.", wrap);
+
+      const payload = buildPixPayload({
+        key: state.config.pixKey,
+        merchantName: state.config.merchantName || state.config.bankName || "PDV BANCA",
+        city: state.config.city || "SAO PAULO",
+        amount: cartTotal()
+      });
+
+      wrap.querySelector("#pixPayload").value = payload;
+      wrap.querySelector("#closePix").addEventListener("click", closeModal);
+      wrap.querySelector("#copyPix").addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(payload);
+          showToast("PIX copiado para a área de transferência.");
+        } catch {
+          showToast("Não foi possível copiar automaticamente.");
+        }
+      });
+
+      const qrTarget = wrap.querySelector("#qrcodeArea");
+      state.qrCodeInstance = new QRCode(qrTarget, {
+        text: payload,
+        width: 260,
+        height: 260,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    function openReportModal() {
+      const today = todayDateInputValue();
+      const form = document.createElement("form");
+      form.className = "stack";
+      form.innerHTML = `
+        <div class="form-grid three">
+          <div class="field-group">
+            <label class="field-label">Data inicial</label>
+            <input class="date-input" type="date" name="startDate" value="${today}" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Data final</label>
+            <input class="date-input" type="date" name="endDate" value="${today}" required />
+          </div>
+          <div class="field-group" style="align-self:end;">
+            <button class="primary-btn" type="submit">FILTRAR</button>
+          </div>
+        </div>
+        <div id="reportResult"></div>
+      `;
+
+      const renderReport = (startDate, endDate) => {
+        const start = new Date(`${startDate}T00:00:00`);
+        const end = new Date(`${endDate}T23:59:59.999`);
+        const sales = state.sales.filter((sale) => {
+          const saleDate = new Date(sale.date);
+          return saleDate >= start && saleDate <= end;
+        });
+        const todayStart = new Date(`${todayDateInputValue()}T00:00:00`);
+        const todayEnd = new Date(`${todayDateInputValue()}T23:59:59.999`);
+        const todaysSales = state.sales.filter((sale) => {
+          const saleDate = new Date(sale.date);
+          return saleDate >= todayStart && saleDate <= todayEnd;
+        });
+        const total = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+        const todayTotal = todaysSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+        const soldMap = new Map();
+        sales.forEach((sale) => {
+          sale.items.forEach((item) => {
+            const current = soldMap.get(item.productId) || { name: item.name, quantity: 0, total: 0 };
+            current.quantity += item.quantity;
+            current.total += item.quantity * item.price;
+            soldMap.set(item.productId, current);
+          });
+        });
+        const ranking = [...soldMap.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 8);
+
+        return `
+          <div class="report-grid">
+            <div class="report-card"><div class="label">Vendas no período</div><div class="value">${sales.length}</div></div>
+            <div class="report-card"><div class="label">Total arrecadado</div><div class="value">${money(total)}</div></div>
+            <div class="report-card"><div class="label">Vendas do dia</div><div class="value">${todaysSales.length}</div></div>
+            <div class="report-card"><div class="label">Total do dia</div><div class="value">${money(todayTotal)}</div></div>
+          </div>
+          <div class="report-columns">
+            <div class="report-box">
+              <h4>Produtos mais vendidos</h4>
+              ${ranking.length ? ranking.map((item, index) => `
+                <div class="ranking-item">
+                  <div><strong>${index + 1}. ${escapeHtml(item.name)}</strong></div>
+                  <div>${item.quantity} un. - ${money(item.total)}</div>
+                </div>
+              `).join("") : `<div class="helper">Sem vendas no período selecionado.</div>`}
+            </div>
+            <div class="report-box">
+              <h4>Histórico no período</h4>
+              ${sales.length ? sales.map((sale) => `
+                <div class="ranking-item">
+                  <div>
+                    <strong>${formatDateTime(sale.date)}</strong><br />
+                    <span class="helper">${sale.items.length} item(ns)</span>
+                  </div>
+                  <div>${money(sale.total)}</div>
+                </div>
+              `).join("") : `<div class="helper">Nenhuma venda encontrada para esse filtro.</div>`}
+            </div>
+          </div>
+        `;
+      };
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        form.querySelector("#reportResult").innerHTML = renderReport(data.startDate, data.endDate);
+      });
+
+      openModal("Relatório de vendas", "Acompanhe vendas do dia atual e filtre por período.", form);
+      form.querySelector("#reportResult").innerHTML = renderReport(today, today);
+    }
+
+    function buildPixPayload({ key, merchantName, city, amount }) {
+      const sanitizedName = normalizePixField(merchantName || "PDV BANCA", 25);
+      const sanitizedCity = normalizePixField(city || "SAO PAULO", 15);
+      const value = Number(amount || 0).toFixed(2);
+      const payload = [
+        tlv("00", "01"),
+        tlv("26", tlv("00", "br.gov.bcb.pix") + tlv("01", key)),
+        tlv("52", "0000"),
+        tlv("53", "986"),
+        tlv("54", value),
+        tlv("58", "BR"),
+        tlv("59", sanitizedName),
+        tlv("60", sanitizedCity),
+        tlv("62", tlv("05", "***"))
+      ].join("");
+      return payload + tlv("63", crc16(payload + "6304"));
+    }
+
+    function normalizePixField(value, maxLength) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/[^A-Z0-9 \-\.]/g, "")
+        .slice(0, maxLength)
+        .trim();
+    }
+
+    function tlv(id, value) {
+      const text = String(value || "");
+      const length = String(text.length).padStart(2, "0");
+      return `${id}${length}${text}`;
+    }
+
+    function crc16(payload) {
+      let crc = 0xFFFF;
+      for (let i = 0; i < payload.length; i++) {
+        crc ^= payload.charCodeAt(i) << 8;
+        for (let j = 0; j < 8; j++) {
+          if (crc & 0x8000) {
+            crc = (crc << 1) ^ 0x1021;
+          } else {
+            crc <<= 1;
+          }
+          crc &= 0xFFFF;
+        }
+      }
+      return crc.toString(16).toUpperCase().padStart(4, "0");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+  </script>
+</body>
+</html>
