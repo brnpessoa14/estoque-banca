@@ -1,0 +1,19 @@
+{
+  "name": "pdv-banca",
+  "version": "1.0.0",
+  "description": "PDV para Banca de Jornal com Supabase + OAuth + RLS",
+  "main": "index.html",
+  "scripts": {
+    "serve": "http-server -p 8000 -c-1",
+    "dev": "http-server -p 8000 -c-1 -o"
+  },
+  "keywords": ["pdv", "banca", "supabase", "oauth"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0"
+  }
+}

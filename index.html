@@ -1,0 +1,2362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDV Banca de Jornal</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #eef2f7;
+      --panel: #ffffff;
+      --panel-2: #f6f8fb;
+      --panel-3: #e3e9f2;
+      --ink: #162033;
+      --muted: #667085;
+      --accent: #2f6bff;
+      --accent-2: #1f4fd1;
+      --success: #1f9d55;
+      --danger: #d92d20;
+      --warning: #b54708;
+      --line: rgba(22,32,51,0.08);
+      --shadow: 0 18px 40px rgba(22,32,51,0.10);
+      --shadow-sm: 0 8px 18px rgba(22,32,51,0.08);
+      --radius: 18px;
+      --radius-sm: 12px;
+      --font: "SF Pro Text", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--ink);
+      background: var(--bg);
+      overflow-x: hidden;
+    }
+
+    .app {
+      min-height: 100vh;
+      padding: 22px;
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr) 380px;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .sidebar {
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 22px;
+      border: 1px solid var(--line);
+    }
+
+    .brand {
+      padding: 18px;
+      border-radius: 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.22rem;
+      letter-spacing: 0.02em;
+      text-transform: none;
+      line-height: 1.2;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .brand p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .action-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .action-btn,
+    .pill-btn,
+    .category-btn,
+    .primary-btn,
+    .success-btn,
+    .danger-btn,
+    .ghost-btn {
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--ink);
+      min-height: 56px;
+      border-radius: 12px;
+      font-size: 1.02rem;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+      letter-spacing: 0.01em;
+    }
+
+    .action-btn:hover,
+    .pill-btn:hover,
+    .category-btn:hover,
+    .primary-btn:hover,
+    .success-btn:hover,
+    .danger-btn:hover,
+    .ghost-btn:hover { transform: translateY(-1px); }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+      box-shadow: none;
+    }
+
+    .action-btn:hover {
+      box-shadow: var(--shadow);
+    }
+
+    .action-btn:hover .action-icon {
+      background: #ffffff;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .action-btn {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      text-align: left;
+      min-height: 96px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      align-items: center;
+      column-gap: 16px;
+    }
+
+    .action-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: #edf3ff;
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+    }
+
+    .action-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .action-content {
+      display: grid;
+      gap: 4px;
+    }
+
+    .action-title {
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+    }
+
+    .action-btn small {
+      display: block;
+      margin-top: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .topbar {
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .topbar-title h2 {
+      margin: 0;
+      font-size: 1.28rem;
+      font-weight: 700;
+    }
+
+    .topbar-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .topbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .pill-btn {
+      min-height: 56px;
+      padding: 0 18px;
+      background: var(--panel-2);
+      box-shadow: none;
+      border: 1px solid var(--line);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .pill-btn.secondary {
+      background: var(--panel-2);
+      box-shadow: none;
+      border: 1px solid var(--line);
+    }
+
+    .pill-btn:not(.secondary) {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 10px 18px rgba(47,107,255,0.18);
+    }
+
+    .btn-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+    }
+
+    .pill-btn:not(.secondary) .btn-icon,
+    .primary-btn .btn-icon,
+    .success-btn .btn-icon,
+    .danger-btn .btn-icon {
+      background: rgba(255,255,255,0.22);
+      border-color: rgba(255,255,255,0.35);
+      color: #ffffff;
+    }
+
+    .btn-icon svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .btn-label { display: inline-block; }
+
+    .catalog {
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .categories {
+      padding: 16px;
+    }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .category-btn {
+      padding: 14px 14px;
+      text-align: left;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      min-height: 72px;
+      box-shadow: none;
+      color: var(--ink);
+    }
+
+    .category-btn.active {
+      outline: 2px solid rgba(47,107,255,0.18);
+      background: #eef4ff;
+      transform: translateY(-1px) scale(1.01);
+    }
+
+    .category-btn span {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .products-panel {
+      padding: 16px;
+      min-height: 360px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .section-header h3,
+    .section-header h4 {
+      margin: 0;
+      font-size: 1.12rem;
+      font-weight: 700;
+    }
+
+    .section-header p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .search-input,
+    .field,
+    .select,
+    .date-input,
+    .text-area {
+      width: 100%;
+      background: #ffffff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 13px 14px;
+      font-size: 1rem;
+      outline: none;
+      box-shadow: 0 2px 10px rgba(29,29,31,0.04);
+    }
+
+    .search-input::placeholder,
+    .field::placeholder,
+    .text-area::placeholder { color: rgba(110,110,115,0.6); }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }
+
+    .product-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .product-card h4 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.25;
+      min-height: 2.5em;
+    }
+
+    .meta-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      width: fit-content;
+      color: var(--ink);
+    }
+
+    .badge.green { background: rgba(52,199,89,0.12); color: #0a3; }
+    .badge.yellow { background: rgba(255,204,0,0.12); color: #b36f00; }
+    .badge.red { background: rgba(255,59,48,0.10); color: var(--danger); }
+
+    .primary-btn {
+      background: var(--accent);
+      color: #fff;
+      min-height: 54px;
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .success-btn {
+      background: var(--success);
+      color: #fff;
+      min-height: 50px;
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .danger-btn {
+      background: var(--danger);
+      color: #fff;
+      min-height: 44px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .ghost-btn {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      min-height: 42px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .cart {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 16px;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .cart-table-wrap {
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      min-height: 240px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 320px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.95rem;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--panel-2);
+      z-index: 1;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    tbody tr:hover { background: #f7f7f9; }
+
+    .cart-total {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .cart-total-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .cart-total-main {
+      display: grid;
+      gap: 2px;
+    }
+
+    .cart-total span {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .cart-total strong { font-size: 1.2rem; }
+
+    .cart-actions {
+      display: grid;
+      gap: 12px;
+    }
+
+    .cart-clear-btn {
+      min-height: 42px;
+      width: auto;
+      padding: 0 14px;
+      white-space: nowrap;
+    }
+
+    .cart-empty {
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(29,29,31,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+      backdrop-filter: blur(6px);
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      width: min(980px, 100%);
+      max-height: min(92vh, 960px);
+      overflow: auto;
+      border-radius: 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: 0 24px 60px rgba(22,32,51,0.12);
+    }
+
+    .modal.small { width: min(640px, 100%); }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 18px 0;
+    }
+
+    .modal-body {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .modal-title h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .modal-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .close-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--ink);
+      min-width: 42px;
+      min-height: 42px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .form-grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .field-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field-label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .compact-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .list-item {
+      display: grid;
+      grid-template-columns: 1.5fr 0.6fr 0.7fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .list-item .name { font-weight: 700; }
+
+    .list-item .muted { color: var(--muted); font-size: 0.88rem; }
+
+    .report-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .report-card {
+      padding: 14px;
+      border-radius: 18px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .report-card .label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .report-card .value {
+      font-size: 1.3rem;
+      font-weight: 800;
+    }
+
+    .report-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .report-box {
+      padding: 14px;
+      border-radius: 18px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      min-height: 220px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .report-box h4 { margin: 0 0 12px; }
+
+    .ranking-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .ranking-item:last-child { border-bottom: none; }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 80;
+      background: rgba(29,29,31,0.92);
+      border: 1px solid rgba(29,29,31,0.2);
+      color: #ffffff;
+      padding: 14px 16px;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      display: none;
+      max-width: 340px;
+    }
+
+    .toast.show { display: block; }
+
+    .helper {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    #printArea {
+      display: none;
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea {
+        display: block;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: #fff;
+        color: #000;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 1240px) {
+      .app { grid-template-columns: 300px minmax(0, 1fr); }
+      .cart { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 880px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { order: 1; }
+      .main { order: 2; }
+      .cart { order: 3; }
+      .report-grid,
+      .report-columns,
+      .form-grid,
+      .form-grid.three,
+      .list-item { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel sidebar">
+      <div class="brand">
+        <h1 id="brandTitle">PDV da Banca</h1>
+        <p>Venda rápida, estoque e relatório em um único painel.</p>
+      </div>
+
+      <div class="action-list">
+        <button class="action-btn" id="btnPrint">
+          <span class="action-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M7 8V4h10v4"/><path d="M6 16h12v4H6z"/><path d="M6 12h12"/><path d="M6 12V9h12v3"/></svg>
+          </span>
+          <span class="action-content">
+            <span class="action-title">IMPRESSÃO / WHATSAPP</span>
+            <small>Abre o QR code para enviar os arquivos da venda</small>
+          </span>
+        </button>
+        <button class="action-btn" id="btnAddProduct">
+          <span class="action-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/><path d="M7 7h10v10H7z"/></svg>
+          </span>
+          <span class="action-content">
+            <span class="action-title">CADASTRAR PRODUTO</span>
+            <small>Abre modal para novo cadastro</small>
+          </span>
+        </button>
+        <button class="action-btn" id="btnRemoveProduct">
+          <span class="action-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M9 7v12"/><path d="M15 7v12"/><path d="M8 7l1-2h6l1 2"/></svg>
+          </span>
+          <span class="action-content">
+            <span class="action-title">REMOVER PRODUTO</span>
+            <small>Buscar e excluir produto do estoque</small>
+          </span>
+        </button>
+        <button class="action-btn" id="btnChangePrice">
+          <span class="action-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M6 7h9l3 3-7 7-5-5z"/><path d="M14 6V4"/><path d="M10 20h6"/></svg>
+          </span>
+          <span class="action-content">
+            <span class="action-title">ALTERAR PREÇO</span>
+            <small>Localizar e atualizar preço de venda</small>
+          </span>
+        </button>
+        <button class="action-btn" id="btnLowStock">
+          <span class="action-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h10"/><path d="M4 17h7"/><path d="M18 12v6"/><path d="M15 15h6"/></svg>
+          </span>
+          <span class="action-content">
+            <span class="action-title">LISTA DE COMPRAS</span>
+            <small>Mostra produtos com estoque baixo</small>
+          </span>
+        </button>
+        <button class="action-btn" id="btnReport">
+          <span class="action-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 16V9"/><path d="M12 16V6"/><path d="M17 16v-4"/></svg>
+          </span>
+          <span class="action-content">
+            <span class="action-title">GERAR RELATÓRIO</span>
+            <small>Vendas do dia e filtro por período</small>
+          </span>
+        </button>
+      </div>
+
+      <button class="pill-btn secondary" id="btnSettings">
+        <span class="btn-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3v2"/><path d="M12 19v2"/><path d="M4.6 6.6l1.4 1.4"/><path d="M18 16l1.4 1.4"/><path d="M3 12h2"/><path d="M19 12h2"/><path d="M4.6 17.4l1.4-1.4"/><path d="M18 8l1.4-1.4"/><circle cx="12" cy="12" r="3"/></svg>
+        </span>
+        <span class="btn-label">CONFIGURAÇÕES PIX / BANCA</span>
+      </button>
+    </aside>
+
+    <main class="main">
+      <section class="panel topbar">
+        <div class="topbar-title">
+          <h2>Operação de venda</h2>
+          <p id="statusLine">Selecione uma categoria, adicione produtos ao carrinho e feche a venda.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="pill-btn" id="btnAuth">
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3a5 5 0 0 1 0 10"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M14 8h6"/><path d="M17 5l3 3-3 3"/></svg>
+            </span>
+            <span class="btn-label">ENTRAR</span>
+          </button>
+          <button class="pill-btn secondary" id="btnSync" disabled>
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-9 9"/><path d="M12 21l-3-3"/><path d="M3 12a9 9 0 0 1 9-9"/><path d="M12 3l3 3"/></svg>
+            </span>
+            <span class="btn-label">SINCRONIZAR</span>
+          </button>
+          <button class="pill-btn" id="btnOpenSettingsQuick">
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3v2"/><path d="M12 19v2"/><path d="M4.6 6.6l1.4 1.4"/><path d="M18 16l1.4 1.4"/><path d="M3 12h2"/><path d="M19 12h2"/><path d="M4.6 17.4l1.4-1.4"/><path d="M18 8l1.4-1.4"/><circle cx="12" cy="12" r="3"/></svg>
+            </span>
+            <span class="btn-label">Ajustar dados da banca</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="panel categories">
+        <div class="section-header">
+          <div>
+            <h3>Categorias</h3>
+            <p>Clique para exibir os produtos da categoria abaixo.</p>
+          </div>
+        </div>
+        <div class="categories-grid" id="categoriesGrid"></div>
+      </section>
+
+      <section class="panel products-panel">
+        <div class="section-header">
+          <div>
+            <h3 id="productsTitle">Produtos</h3>
+            <p id="productsSubtitle">Escolha uma categoria para começar.</p>
+          </div>
+          <div style="min-width: 260px; max-width: 360px; width: 100%;">
+            <input id="productFilter" class="search-input" placeholder="Buscar produto na categoria..." />
+          </div>
+        </div>
+        <div class="products-grid" id="productsGrid"></div>
+      </section>
+    </main>
+
+    <aside class="panel cart">
+      <div class="section-header" style="margin-bottom:0;">
+        <div>
+          <h3>Carrinho de venda</h3>
+          <p>Produto, subtotal e total geral.</p>
+        </div>
+      </div>
+
+      <div class="cart-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Valor</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="cartBody"></tbody>
+        </table>
+        <div class="cart-empty" id="cartEmpty">Carrinho vazio.</div>
+      </div>
+
+      <div class="cart-total">
+        <div class="cart-total-main">
+          <span>Total geral</span>
+          <strong id="cartTotal">R$ 0,00</strong>
+        </div>
+        <div class="cart-total-actions">
+          <button class="ghost-btn cart-clear-btn" id="btnClearCart" type="button">Limpar carrinho</button>
+        </div>
+      </div>
+
+      <div class="cart-actions">
+        <button class="primary-btn" id="btnPix">
+          <span class="btn-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h7v7h-7z"/></svg>
+          </span>
+          <span class="btn-label">GERAR QR CODE PIX</span>
+        </button>
+        <button class="success-btn" id="btnCloseSale">
+          <span class="btn-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>
+          </span>
+          <span class="btn-label">FECHAR VENDA</span>
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay" aria-hidden="true">
+    <div class="modal" id="modalBox">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h3 id="modalTitle">Modal</h3>
+          <p id="modalSubtitle">Detalhes</p>
+        </div>
+        <button class="close-btn" id="modalClose" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div id="printArea"></div>
+
+  <script>
+    // Supabase config (substitua com seus valores)
+    const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co'
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY'
+    const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) || null
+
+    const STORAGE_KEYS = {
+      products: "pdv_banca_products",
+      sales: "pdv_banca_sales",
+      config: "pdv_banca_config",
+      activityLogs: "pdv_banca_activity_logs"
+    };
+
+    // Estado compartilhado
+    let currentUserId = null;
+
+    const CATEGORIES = [
+      "BEBIDAS NÃO ALCOÓLICAS",
+      "BEBIDAS ALCOÓLICAS / ENERGÉTICO",
+      "SALGADOS",
+      "DOCES",
+      "PAPELARIA",
+      "ACESSÓRIOS ELETRÔNICOS",
+      "ÁLBUNS / FIGURINHAS",
+      "CAÇA-PALAVRAS / CRUZADAS / ETC",
+      "CIGARRO",
+      "REVISTAS",
+      "LOTERIA",
+      "OUTRO"
+    ];
+
+    const seedProducts = [
+      { id: crypto.randomUUID(), name: "Água mineral 500ml", category: CATEGORIES[0], price: 4.5, stock: 24, minStock: 6 },
+      { id: crypto.randomUUID(), name: "Chocolate barra", category: CATEGORIES[3], price: 8.0, stock: 16, minStock: 5 },
+      { id: crypto.randomUUID(), name: "Caneta esferográfica", category: CATEGORIES[4], price: 4.0, stock: 40, minStock: 10 },
+      { id: crypto.randomUUID(), name: "Revista semanal", category: CATEGORIES[9], price: 16.9, stock: 17, minStock: 5 }
+    ];
+
+    const defaultConfig = {
+      bankName: "Banca Central",
+      pixKey: "",
+      whatsappNumber: "",
+      city: "SAO PAULO",
+      merchantName: "BANCA CENTRAL"
+    };
+
+    const state = {
+      products: [],
+      sales: [],
+      activityLogs: [],
+      config: defaultConfig,
+      cart: [],
+      activeCategory: CATEGORIES[0],
+      productFilter: "",
+      modalContext: null,
+      qrCodeInstance: null
+    };
+
+    async function initializeApp() {
+      // verifica autenticação e carrega dados
+      let isAuthed = false;
+      if (supabaseClient) {
+        try {
+          const { data } = await supabaseClient.auth.getUser();
+          if (data?.user) {
+            currentUserId = data.user.id;
+            isAuthed = true;
+            // carrega dados do Supabase
+            const products = await loadJSON(STORAGE_KEYS.products, []);
+            const sales = await loadJSON(STORAGE_KEYS.sales, []);
+            const config = await loadJSON(STORAGE_KEYS.config, {});
+            const activityLogs = await loadJSON(STORAGE_KEYS.activityLogs, []);
+            state.products = Array.isArray(products) ? products : [];
+            state.sales = Array.isArray(sales) ? sales : [];
+            state.activityLogs = Array.isArray(activityLogs) ? activityLogs : [];
+            state.config = { ...defaultConfig, ...config };
+          }
+        } catch (err) {
+          console.warn('aviso ao inicializar Supabase:', err);
+        }
+      }
+      
+      // se ainda não tem dados (localStorage ou Supabase falhou), carrega do localStorage direto
+      if (state.products.length === 0) {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.products);
+          state.products = raw ? JSON.parse(raw) : [];
+        } catch {
+          state.products = [];
+        }
+      }
+      if (state.sales.length === 0) {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.sales);
+          state.sales = raw ? JSON.parse(raw).map((sale) => ({
+            ...sale,
+            paymentMethod: sale.paymentMethod || sale.payment_method || ""
+          })) : [];
+        } catch {
+          state.sales = [];
+        }
+      }
+      if (state.activityLogs.length === 0) {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.activityLogs);
+          state.activityLogs = raw ? JSON.parse(raw) : [];
+        } catch {
+          state.activityLogs = [];
+        }
+      }
+      
+      updateAuthUI(isAuthed);
+      if (state.products.length === 0) {
+        state.products = seedProducts;
+        await persistProducts();
+      }
+      renderAll();
+    }
+
+    // observa mudanças de autenticação
+    if (supabaseClient) {
+      supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        if (session?.user) {
+          currentUserId = session.user.id;
+          updateAuthUI(true);
+          // recarrega dados quando o usuário faz login
+          const products = await loadJSON(STORAGE_KEYS.products, []);
+          const sales = await loadJSON(STORAGE_KEYS.sales, []);
+          const config = await loadJSON(STORAGE_KEYS.config, {});
+          const activityLogs = await loadJSON(STORAGE_KEYS.activityLogs, []);
+          state.products = Array.isArray(products) ? products : [];
+          state.sales = Array.isArray(sales) ? sales.map((sale) => ({
+            ...sale,
+            paymentMethod: sale.paymentMethod || sale.payment_method || ""
+          })) : [];
+          state.activityLogs = Array.isArray(activityLogs) ? activityLogs : [];
+          state.config = { ...defaultConfig, ...config };
+          renderAll();
+        } else {
+          currentUserId = null;
+          updateAuthUI(false);
+          // volta aos dados locais
+          state.products = loadJSONSync(STORAGE_KEYS.products, []);
+          state.sales = loadJSONSync(STORAGE_KEYS.sales, []).map((sale) => ({
+            ...sale,
+            paymentMethod: sale.paymentMethod || sale.payment_method || ""
+          }));
+          state.activityLogs = loadJSONSync(STORAGE_KEYS.activityLogs, []);
+          state.config = { ...defaultConfig, ...loadJSONSync(STORAGE_KEYS.config, {}) };
+          renderAll();
+        }
+      });
+    }
+
+    // versão síncrona de loadJSON para uso sem await
+    function loadJSONSync(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    // Funções de autenticação e sincronização com Supabase
+    async function handleAuthClick() {
+      if (!supabaseClient) {
+        showToast("Supabase não está configurado. Verifique URL e ANON_KEY.");
+        return;
+      }
+      const user = await getCurrentUser();
+      if (user) {
+        await supabaseClient.auth.signOut();
+        showToast("Desconectado com sucesso.");
+      } else {
+        await supabaseClient.auth.signInWithOAuth({ provider: 'google' });
+      }
+    }
+
+    function updateAuthUI(isAuthed) {
+      const btnAuth = document.getElementById("btnAuth");
+      const btnSync = document.getElementById("btnSync");
+      if (!btnAuth || !btnSync) return;
+      const label = btnAuth.querySelector(".btn-label") || btnAuth;
+      label.textContent = isAuthed ? "SAIR" : "ENTRAR";
+      btnSync.disabled = !isAuthed;
+    }
+
+    async function getCurrentUser() {
+      if (!supabaseClient) return null;
+      try {
+        const { data } = await supabaseClient.auth.getUser();
+        return data?.user || null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function handleSyncClick() {
+      if (!supabaseClient) {
+        showToast("Supabase não está configurado.");
+        return;
+      }
+      const user = await getCurrentUser();
+      if (!user) {
+        showToast("Faça login antes de sincronizar.");
+        return;
+      }
+
+      const choice = confirm("OK = Enviar dados locais para Supabase\nCancel = Baixar dados do Supabase");
+      if (choice) {
+        // Enviar local → Supabase
+        try {
+          await persistProducts();
+          await persistSales();
+          await persistConfig();
+          await recordActivity("sync", "Dados enviados para o Supabase.", {
+            direction: "upload"
+          });
+          showToast("Dados sincronizados para Supabase com sucesso!");
+        } catch (err) {
+          console.error('erro ao sincronizar:', err);
+          showToast("Erro ao sincronizar dados. Veja console.");
+        }
+      } else {
+        // Baixar Supabase → local
+        try {
+          const products = await loadJSON(STORAGE_KEYS.products, []);
+          const sales = await loadJSON(STORAGE_KEYS.sales, []);
+          const config = await loadJSON(STORAGE_KEYS.config, {});
+          const activityLogs = await loadJSON(STORAGE_KEYS.activityLogs, []);
+          state.products = Array.isArray(products) ? products : [];
+          state.sales = Array.isArray(sales) ? sales.map((sale) => ({
+            ...sale,
+            paymentMethod: sale.paymentMethod || sale.payment_method || ""
+          })) : [];
+          state.activityLogs = Array.isArray(activityLogs) ? activityLogs : [];
+          state.config = { ...defaultConfig, ...config };
+          await recordActivity("sync", "Dados baixados do Supabase.", {
+            direction: "download"
+          });
+          renderAll();
+          showToast("Dados baixados do Supabase!");
+        } catch (err) {
+          console.error('erro ao baixar dados:', err);
+          showToast("Erro ao baixar dados. Veja console.");
+        }
+      }
+    }
+
+    const els = {
+      brandTitle: document.getElementById("brandTitle"),
+      statusLine: document.getElementById("statusLine"),
+      categoriesGrid: document.getElementById("categoriesGrid"),
+      productsGrid: document.getElementById("productsGrid"),
+      productsTitle: document.getElementById("productsTitle"),
+      productsSubtitle: document.getElementById("productsSubtitle"),
+      productFilter: document.getElementById("productFilter"),
+      cartBody: document.getElementById("cartBody"),
+      cartEmpty: document.getElementById("cartEmpty"),
+      cartTotal: document.getElementById("cartTotal"),
+      modalOverlay: document.getElementById("modalOverlay"),
+      modalBox: document.getElementById("modalBox"),7
+      modalTitle: document.getElementById("modalTitle"),
+      modalSubtitle: document.getElementById("modalSubtitle"),
+      modalBody: document.getElementById("modalBody"),
+      toast: document.getElementById("toast"),
+      printArea: document.getElementById("printArea")
+    };
+
+    bindUI();
+    (async () => {
+      await initializeApp();
+    })();
+
+    function bindUI() {
+      document.getElementById("btnPrint").addEventListener("click", openWhatsAppShareModal);
+      document.getElementById("btnAddProduct").addEventListener("click", () => openAddProductModal());
+      document.getElementById("btnRemoveProduct").addEventListener("click", () => openRemoveProductModal());
+      document.getElementById("btnChangePrice").addEventListener("click", () => openChangePriceModal());
+      document.getElementById("btnLowStock").addEventListener("click", () => openLowStockModal());
+      document.getElementById("btnReport").addEventListener("click", () => openReportModal());
+      document.getElementById("btnSettings").addEventListener("click", () => openSettingsModal());
+      document.getElementById("btnOpenSettingsQuick").addEventListener("click", () => openSettingsModal());
+      document.getElementById("btnClearCart").addEventListener("click", clearCart);
+      document.getElementById("btnPix").addEventListener("click", openPixModal);
+      document.getElementById("btnCloseSale").addEventListener("click", openCloseSaleModal);
+      document.getElementById("btnAuth")?.addEventListener("click", handleAuthClick);
+      document.getElementById("btnSync")?.addEventListener("click", handleSyncClick);
+      els.modalOverlay.addEventListener("click", (event) => {
+        if (event.target === els.modalOverlay) closeModal();
+      });
+      document.getElementById("modalClose").addEventListener("click", closeModal);
+      els.productFilter.addEventListener("input", (event) => {
+        state.productFilter = event.target.value.trim().toLowerCase();
+        renderProducts();
+      });
+    }
+
+    async function loadJSON(key, fallback) {
+      // tenta carregar do Supabase se autenticado, senão do localStorage
+      if (supabaseClient && currentUserId && key === STORAGE_KEYS.products) {
+        try {
+          const { data, error } = await supabaseClient.from('products').select('*').eq('owner', currentUserId);
+          return error ? fallback : data || fallback;
+        } catch {
+          return fallback;
+        }
+      }
+      if (supabaseClient && currentUserId && key === STORAGE_KEYS.sales) {
+        try {
+          const { data, error } = await supabaseClient.from('sales').select('*').eq('owner', currentUserId);
+          return error ? fallback : (Array.isArray(data) ? data.map((sale) => ({
+            ...sale,
+            paymentMethod: sale.paymentMethod || sale.payment_method || ""
+          })) : fallback);
+        } catch {
+          return fallback;
+        }
+      }
+      if (supabaseClient && currentUserId && key === STORAGE_KEYS.config) {
+        try {
+          const { data, error } = await supabaseClient.from('configs').select('*').eq('owner', currentUserId).single();
+          return error ? fallback : (data ? {
+            bankName: data.bank_name || "",
+            merchantName: data.merchant_name || "",
+            city: data.city || "",
+            pixKey: data.pix_key || "",
+            whatsappNumber: data.whatsapp_number || ""
+          } : fallback);
+        } catch {
+          return fallback;
+        }
+      }
+      if (supabaseClient && currentUserId && key === STORAGE_KEYS.activityLogs) {
+        try {
+          const { data, error } = await supabaseClient.from('activity_logs').select('*').eq('owner', currentUserId).order('date', { ascending: false });
+          return error ? fallback : data || fallback;
+        } catch {
+          return fallback;
+        }
+      }
+      // fallback: localStorage
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    async function persistProducts() {
+      localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(state.products));
+      if (supabaseClient && currentUserId) {
+        try {
+          const remoteProducts = await supabaseClient.from('products').select('id').eq('owner', currentUserId);
+          const localIds = new Set(state.products.map((product) => product.id));
+          const remoteIds = Array.isArray(remoteProducts.data) ? remoteProducts.data.map((product) => product.id) : [];
+          const deletedIds = remoteIds.filter((id) => !localIds.has(id));
+          for (const p of state.products) {
+            await supabaseClient.from('products').upsert({ ...p, owner: currentUserId });
+          }
+          if (deletedIds.length) {
+            await supabaseClient.from('products').delete().eq('owner', currentUserId).in('id', deletedIds);
+          }
+        } catch (err) {
+          console.warn('aviso ao salvar produtos no Supabase:', err);
+        }
+      }
+    }
+
+    async function persistSales() {
+      localStorage.setItem(STORAGE_KEYS.sales, JSON.stringify(state.sales));
+      if (supabaseClient && currentUserId) {
+        try {
+          for (const s of state.sales) {
+            await supabaseClient.from('sales').upsert({ ...s, owner: currentUserId, payment_method: s.paymentMethod || null });
+          }
+        } catch (err) {
+          console.warn('aviso ao salvar vendas no Supabase:', err);
+        }
+      }
+    }
+
+    async function persistActivityLogs() {
+      localStorage.setItem(STORAGE_KEYS.activityLogs, JSON.stringify(state.activityLogs));
+      if (supabaseClient && currentUserId) {
+        try {
+          for (const log of state.activityLogs) {
+            await supabaseClient.from('activity_logs').upsert({
+              ...log,
+              owner: currentUserId
+            });
+          }
+        } catch (err) {
+          console.warn('aviso ao salvar auditoria no Supabase:', err);
+        }
+      }
+    }
+
+    async function persistConfig() {
+      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(state.config));
+      if (supabaseClient && currentUserId) {
+        try {
+          await supabaseClient.from('configs').upsert({ owner: currentUserId, bank_name: state.config.bankName, merchant_name: state.config.merchantName, city: state.config.city, pix_key: state.config.pixKey, whatsapp_number: state.config.whatsappNumber });
+        } catch (err) {
+          console.warn('aviso ao salvar config no Supabase:', err);
+        }
+      }
+    }
+
+    function money(value) {
+      return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0));
+    }
+
+    function formatPaymentMethod(method) {
+      const normalized = String(method || "").toLowerCase();
+      if (normalized === "debito") return "Débito";
+      if (normalized === "credito") return "Crédito";
+      if (normalized === "pix") return "Pix";
+      return "Não informado";
+    }
+
+    function buildSalesCsv(sales) {
+      const header = ["data", "forma_pagamento", "total", "itens", "produto", "quantidade", "preco_unitario", "subtotal"];
+      const rows = [header.join(",")];
+      sales.forEach((sale) => {
+        const base = [
+          JSON.stringify(formatDateTime(sale.date)),
+          JSON.stringify(formatPaymentMethod(sale.paymentMethod)),
+          Number(sale.total || 0).toFixed(2),
+          sale.items.length,
+          "",
+          "",
+          "",
+          ""
+        ];
+        rows.push(base.join(","));
+        sale.items.forEach((item) => {
+          rows.push([
+            JSON.stringify(formatDateTime(sale.date)),
+            JSON.stringify(formatPaymentMethod(sale.paymentMethod)),
+            Number(sale.total || 0).toFixed(2),
+            sale.items.length,
+            JSON.stringify(String(item.name || "").replace(/"/g, '""')),
+            item.quantity,
+            Number(item.price || 0).toFixed(2),
+            Number(item.subtotal || (Number(item.price || 0) * Number(item.quantity || 0))).toFixed(2)
+          ].join(","));
+        });
+      });
+      return rows.join("\n");
+    }
+
+    function downloadTextFile(filename, content, mime = "text/plain;charset=utf-8") {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function recordActivity(type, message, meta = {}) {
+      state.activityLogs.unshift({
+        id: crypto.randomUUID(),
+        date: toIsoDate(new Date()),
+        type,
+        message,
+        meta
+      });
+      state.activityLogs = state.activityLogs.slice(0, 200);
+      await persistActivityLogs();
+    }
+
+    function toIsoDate(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      return date.toISOString();
+    }
+
+    function todayDateInputValue() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function formatDateTime(value) {
+      return new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short"
+      }).format(new Date(value));
+    }
+
+    function normalizeText(text) {
+      return String(text || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => els.toast.classList.remove("show"), 2600);
+    }
+
+    function openModal(title, subtitle, bodyNode) {
+      els.modalTitle.textContent = title;
+      els.modalSubtitle.textContent = subtitle;
+      els.modalBody.innerHTML = "";
+      if (Array.isArray(bodyNode)) {
+        bodyNode.forEach((node) => els.modalBody.appendChild(node));
+      } else {
+        els.modalBody.appendChild(bodyNode);
+      }
+      els.modalOverlay.classList.add("open");
+      els.modalOverlay.setAttribute("aria-hidden", "false");
+    }
+
+    function closeModal() {
+      els.modalOverlay.classList.remove("open");
+      els.modalOverlay.setAttribute("aria-hidden", "true");
+      els.modalBody.innerHTML = "";
+      state.modalContext = null;
+      if (state.qrCodeInstance) {
+        state.qrCodeInstance.clear();
+        state.qrCodeInstance = null;
+      }
+    }
+
+    function getProduct(id) {
+      return state.products.find((product) => product.id === id);
+    }
+
+    function getCartItem(productId) {
+      return state.cart.find((item) => item.productId === productId);
+    }
+
+    function availableStock(product) {
+      const inCart = getCartItem(product.id)?.quantity || 0;
+      return Math.max(0, Number(product.stock) - inCart);
+    }
+
+    function cartTotal() {
+      return state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    }
+
+    function cartItemsExpanded() {
+      return state.cart.map((item) => ({
+        ...item,
+        subtotal: item.price * item.quantity,
+        name: getProduct(item.productId)?.name || item.name
+      }));
+    }
+
+    function renderAll() {
+      els.brandTitle.textContent = state.config.bankName || "PDV da Banca";
+      document.title = `${state.config.bankName || "PDV"} - PDV Banca`;
+      document.getElementById("statusLine").textContent = `Banca: ${state.config.bankName || "sem nome"} | Estoque e vendas salvos no navegador.`;
+      renderCategories();
+      renderProducts();
+      renderCart();
+    }
+
+    function renderCategories() {
+      els.categoriesGrid.innerHTML = CATEGORIES.map((category, index) => `
+        <button class="category-btn ${state.activeCategory === category ? "active" : ""}" data-category="${escapeHtml(category)}">
+          <span>${String(index + 1).padStart(2, "0")}</span>
+          ${escapeHtml(category)}
+        </button>
+      `).join("");
+
+      els.categoriesGrid.querySelectorAll(".category-btn").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.activeCategory = button.dataset.category;
+          renderCategories();
+          renderProducts();
+        });
+      });
+    }
+
+    function renderProducts() {
+      const products = state.products.filter((product) => product.category === state.activeCategory);
+      const filtered = products.filter((product) => {
+        const text = normalizeText(`${product.name} ${product.category}`);
+        return text.includes(state.productFilter);
+      });
+
+      els.productsTitle.textContent = state.activeCategory;
+      els.productsSubtitle.textContent = `${filtered.length} produto(s) exibido(s) nesta categoria.`;
+
+      if (filtered.length === 0) {
+        els.productsGrid.innerHTML = `
+          <div class="product-card" style="grid-column:1/-1;">
+            <h4>Nenhum produto encontrado</h4>
+            <div class="helper">Cadastre um novo item ou limpe o filtro de busca.</div>
+          </div>
+        `;
+        return;
+      }
+
+      els.productsGrid.innerHTML = filtered.map((product) => {
+        const stock = availableStock(product);
+        const stockClass = stock <= 0 ? "red" : stock <= product.minStock ? "yellow" : "green";
+        return `
+          <article class="product-card">
+            <div class="badge ${stockClass}">Estoque: ${stock}</div>
+            <h4>${escapeHtml(product.name)}</h4>
+            <div class="meta-line"><span>Preço</span><strong>${money(product.price)}</strong></div>
+            <div class="meta-line"><span>Categoria</span><span>${escapeHtml(product.category)}</span></div>
+            <button class="primary-btn" data-add="${product.id}">+ Adicionar</button>
+          </article>
+        `;
+      }).join("");
+
+      els.productsGrid.querySelectorAll("[data-add]").forEach((button) => {
+        button.addEventListener("click", () => addToCart(button.dataset.add));
+      });
+    }
+
+    function renderCart() {
+      const items = cartItemsExpanded();
+      els.cartEmpty.style.display = items.length === 0 ? "block" : "none";
+      els.cartBody.innerHTML = items.map((item) => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(item.name)}</strong><br />
+            <span class="helper">Qtd.: ${item.quantity}</span>
+          </td>
+          <td>${money(item.subtotal)}</td>
+          <td><button class="danger-btn" data-remove="${item.productId}">Remover</button></td>
+        </tr>
+      `).join("");
+      els.cartTotal.textContent = money(cartTotal());
+
+      els.cartBody.querySelectorAll("[data-remove]").forEach((button) => {
+        button.addEventListener("click", () => removeFromCart(button.dataset.remove));
+      });
+    }
+
+    function addToCart(productId) {
+      const product = getProduct(productId);
+      if (!product) return;
+      const cartItem = getCartItem(productId);
+      const stockLeft = availableStock(product);
+
+      if (stockLeft <= 0) {
+        showToast("Estoque indisponível para esse produto.");
+        return;
+      }
+
+      if (cartItem) {
+        cartItem.quantity += 1;
+      } else {
+        state.cart.push({
+          productId: product.id,
+          name: product.name,
+          price: Number(product.price),
+          quantity: 1
+        });
+      }
+
+      renderCart();
+      renderProducts();
+      showToast(`${product.name} adicionado ao carrinho.`);
+    }
+
+    function removeFromCart(productId) {
+      const index = state.cart.findIndex((item) => item.productId === productId);
+      if (index >= 0) {
+        const item = state.cart[index];
+        item.quantity -= 1;
+        if (item.quantity <= 0) state.cart.splice(index, 1);
+        renderCart();
+        renderProducts();
+      }
+    }
+
+    function clearCart() {
+      state.cart = [];
+      renderCart();
+      renderProducts();
+      showToast("Carrinho limpo.");
+    }
+
+    function openCloseSaleModal() {
+      if (state.cart.length === 0) {
+        showToast("Adicione produtos antes de fechar a venda.");
+        return;
+      }
+
+      const wrap = document.createElement("div");
+      wrap.className = "stack";
+      wrap.innerHTML = `
+        <div class="report-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+          <div class="report-card"><div class="label">Itens</div><div class="value">${state.cart.length}</div></div>
+          <div class="report-card"><div class="label">Total</div><div class="value">${money(cartTotal())}</div></div>
+          <div class="report-card"><div class="label">Banca</div><div class="value" style="font-size:1rem;">${escapeHtml(state.config.bankName || "")}</div></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Escolha a forma de pagamento</label>
+          <div class="modal-actions" style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+            <button type="button" class="primary-btn" data-payment="debito">DÉBITO</button>
+            <button type="button" class="success-btn" data-payment="credito">CRÉDITO</button>
+            <button type="button" class="ghost-btn" data-payment="pix">PIX</button>
+          </div>
+        </div>
+      `;
+
+      openModal("Fechar venda", "Selecione como essa venda foi paga para salvar no histórico.", wrap);
+      wrap.querySelectorAll("[data-payment]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const method = button.getAttribute("data-payment") || "desconhecido";
+          closeModal();
+          await closeSale(method);
+        });
+      });
+    }
+
+    async function closeSale(paymentMethod = "desconhecido") {
+      if (state.cart.length === 0) {
+        showToast("Adicione produtos antes de fechar a venda.");
+        return;
+      }
+
+      for (const item of state.cart) {
+        const product = getProduct(item.productId);
+        if (!product) {
+          showToast("Um item do carrinho não existe mais no estoque.");
+          return;
+        }
+        if (product.stock < item.quantity) {
+          showToast(`Estoque insuficiente para ${product.name}.`);
+          return;
+        }
+      }
+
+      const sale = {
+        id: crypto.randomUUID(),
+        date: toIsoDate(new Date()),
+        items: state.cart.map((item) => ({ ...item })),
+        total: cartTotal(),
+        paymentMethod
+      };
+
+      state.cart.forEach((item) => {
+        const product = getProduct(item.productId);
+        product.stock -= item.quantity;
+      });
+
+      state.sales.push(sale);
+      await persistProducts();
+      await persistSales();
+      await recordActivity("sale", `Venda finalizada em ${formatPaymentMethod(paymentMethod)}.`, {
+        total: sale.total,
+        paymentMethod,
+        itemCount: sale.items.length
+      });
+      clearCart();
+      renderAll();
+      showToast(`Venda finalizada no ${paymentMethod.toUpperCase()}.`);
+    }
+
+    function normalizeWhatsAppNumber(value) {
+      return String(value || "").replace(/\D/g, "");
+    }
+
+    function buildWhatsappMessage() {
+      const items = cartItemsExpanded();
+      const lines = items.map((item) => `• ${item.quantity}x ${item.name} - ${money(item.subtotal)}`).join("\n");
+      return [
+        `Olá! Segue a venda da ${state.config.bankName || "banca"}.`,
+        "",
+        lines,
+        "",
+        `Total: ${money(cartTotal())}`,
+        `Data: ${formatDateTime(new Date())}`
+      ].join("\n");
+    }
+
+    function openWhatsAppShareModal() {
+      if (state.cart.length === 0) {
+        showToast("Nenhum item no carrinho para compartilhar.");
+        return;
+      }
+
+      const message = buildWhatsappMessage();
+      const wrap = document.createElement("div");
+      wrap.className = "stack";
+
+      const renderContent = (phoneValue) => {
+        const phone = normalizeWhatsAppNumber(phoneValue);
+        if (!phone) {
+          wrap.innerHTML = `
+            <div class="report-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div class="report-card"><div class="label">Banca</div><div class="value" style="font-size:1rem;">${escapeHtml(state.config.bankName || "")}</div></div>
+              <div class="report-card"><div class="label">Total</div><div class="value">${money(cartTotal())}</div></div>
+              <div class="report-card"><div class="label">Status</div><div class="value" style="font-size:1rem;">Aguardando número</div></div>
+            </div>
+            <form class="stack" id="whatsappSetupForm">
+              <div class="field-group">
+                <label class="field-label">WhatsApp para enviar os arquivos</label>
+                <input class="field" name="whatsappNumber" value="${escapeHtml(state.config.whatsappNumber || "")}" placeholder="5511999999999" required />
+              </div>
+              <p class="helper">Digite o número com DDI e DDD. Depois o QR code será gerado na hora.</p>
+              <div class="modal-actions" style="justify-content:flex-start;">
+                <button class="primary-btn" type="submit" style="width:auto; padding:0 16px;">GERAR QR CODE</button>
+                <button class="ghost-btn" type="button" id="openSettingsFromWhatsApp">Abrir configurações</button>
+              </div>
+            </form>
+          `;
+
+          wrap.querySelector("#openSettingsFromWhatsApp").addEventListener("click", openSettingsModal);
+          wrap.querySelector("#whatsappSetupForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+            const number = normalizeWhatsAppNumber(data.whatsappNumber);
+            if (!number) {
+              showToast("Informe um número de WhatsApp válido.");
+              return;
+            }
+            state.config.whatsappNumber = number;
+            await persistConfig();
+            renderContent(number);
+          });
+          return;
+        }
+
+        const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        wrap.innerHTML = `
+          <div class="report-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+            <div class="report-card"><div class="label">Banca</div><div class="value" style="font-size:1rem;">${escapeHtml(state.config.bankName || "")}</div></div>
+            <div class="report-card"><div class="label">Total</div><div class="value">${money(cartTotal())}</div></div>
+            <div class="report-card"><div class="label">WhatsApp</div><div class="value" style="font-size:1rem;">${escapeHtml(phone)}</div></div>
+          </div>
+          <div style="display:grid; grid-template-columns: 320px 1fr; gap: 16px; align-items:start;">
+            <div class="report-box" style="min-height: 320px; display:grid; place-items:center;">
+              <div id="whatsappQr"></div>
+            </div>
+            <div class="report-box">
+              <h4>Conversa pronta para envio</h4>
+              <p class="helper">Escaneie o QR code para abrir a conversa no WhatsApp e enviar os arquivos da venda.</p>
+              <textarea class="text-area" id="whatsappMessage" rows="10" readonly></textarea>
+              <div class="modal-actions" style="margin-top:12px; justify-content:flex-start;">
+                <button class="primary-btn" id="openWhatsapp" type="button" style="width:auto; padding:0 16px;">ABRIR WHATSAPP</button>
+                <button class="ghost-btn" id="copyWhatsapp" type="button">COPIAR TEXTO</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        wrap.querySelector("#whatsappMessage").value = message;
+        wrap.querySelector("#openWhatsapp").addEventListener("click", () => window.open(whatsappUrl, "_blank", "noopener,noreferrer"));
+        wrap.querySelector("#copyWhatsapp").addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(message);
+            showToast("Texto copiado para envio.");
+          } catch {
+            showToast("Não foi possível copiar automaticamente.");
+          }
+        });
+
+        const qrTarget = wrap.querySelector("#whatsappQr");
+        state.qrCodeInstance = new QRCode(qrTarget, {
+          text: whatsappUrl,
+          width: 260,
+          height: 260,
+          colorDark: "#162033",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      };
+
+      openModal("Impressão / WhatsApp", "O botão de impressão agora abre a conversa do WhatsApp para envio dos arquivos.", wrap);
+      renderContent(state.config.whatsappNumber);
+    }
+
+    function printCurrentSale() {
+      openWhatsAppShareModal();
+    }
+
+    function openAddProductModal() {
+      const form = document.createElement("form");
+      form.className = "stack";
+      form.innerHTML = `
+        <div class="form-grid">
+          <div class="field-group">
+            <label class="field-label">Nome do produto</label>
+            <input class="field" name="name" required placeholder="Ex.: Revista de esporte" />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Categoria</label>
+            <select class="select" name="category" required>${CATEGORIES.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("")}</select>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Preço de venda (R$)</label>
+            <input class="field" name="price" type="number" min="0" step="0.01" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Quantidade em estoque</label>
+            <input class="field" name="stock" type="number" min="0" step="1" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Estoque mínimo</label>
+            <input class="field" name="minStock" type="number" min="0" step="1" required />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" id="cancelAdd">Cancelar</button>
+          <button type="submit" class="success-btn" style="width:auto; padding:0 18px;">SALVAR</button>
+        </div>
+      `;
+
+      openModal("Cadastrar produto", "Adicione um novo item ao estoque e já deixe disponível para venda.", form);
+      form.querySelector("#cancelAdd").addEventListener("click", closeModal);
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        const product = {
+          id: crypto.randomUUID(),
+          name: data.name.trim(),
+          category: data.category,
+          price: Number(data.price),
+          stock: Number(data.stock),
+          minStock: Number(data.minStock)
+        };
+
+        state.products.push(product);
+        await persistProducts();
+        await recordActivity("product_add", `Produto cadastrado: ${product.name}.`, {
+          productId: product.id,
+          category: product.category,
+          price: product.price,
+          stock: product.stock
+        });
+        renderAll();
+        closeModal();
+        showToast("Produto cadastrado com sucesso.");
+      });
+    }
+
+    function openRemoveProductModal() {
+      const wrap = document.createElement("div");
+      wrap.className = "stack";
+      wrap.innerHTML = `
+        <input class="search-input" id="removeSearch" placeholder="Buscar produto para remover..." />
+        <div class="compact-list" id="removeList"></div>
+      `;
+
+      openModal("Remover produto", "Localize o produto e confirme a exclusão do cadastro.", wrap);
+      const search = wrap.querySelector("#removeSearch");
+      const list = wrap.querySelector("#removeList");
+
+      const renderList = () => {
+        const term = normalizeText(search.value);
+        const items = state.products.filter((product) => normalizeText(`${product.name} ${product.category}`).includes(term));
+        list.innerHTML = items.length ? items.map((product) => `
+          <div class="list-item">
+            <div>
+              <div class="name">${escapeHtml(product.name)}</div>
+              <div class="muted">${escapeHtml(product.category)}</div>
+            </div>
+            <div>${money(product.price)}</div>
+            <div>Estoque: ${product.stock}</div>
+            <button class="danger-btn" data-del="${product.id}">REMOVER</button>
+          </div>
+        `).join("") : `<div class="helper">Nenhum produto encontrado.</div>`;
+
+        list.querySelectorAll("[data-del]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const index = state.products.findIndex((product) => product.id === button.dataset.del);
+            if (index >= 0 && confirm(`Remover ${state.products[index].name}?`)) {
+              const removedProduct = { ...state.products[index] };
+              state.products.splice(index, 1);
+              await persistProducts();
+              await recordActivity("product_remove", `Produto removido: ${removedProduct.name}.`, {
+                productId: removedProduct.id,
+                category: removedProduct.category,
+                price: removedProduct.price
+              });
+              renderAll();
+              renderList();
+              showToast("Produto removido.");
+            }
+          });
+        });
+      };
+
+      search.addEventListener("input", renderList);
+      renderList();
+    }
+
+    function openChangePriceModal() {
+      const wrap = document.createElement("div");
+      wrap.className = "stack";
+      wrap.innerHTML = `
+        <input class="search-input" id="priceSearch" placeholder="Buscar produto para alterar preço..." />
+        <div class="compact-list" id="priceList"></div>
+      `;
+
+      openModal("Alterar preço", "Atualize o valor de venda do produto selecionado.", wrap);
+      const search = wrap.querySelector("#priceSearch");
+      const list = wrap.querySelector("#priceList");
+
+      const renderList = () => {
+        const term = normalizeText(search.value);
+        const items = state.products.filter((product) => normalizeText(`${product.name} ${product.category}`).includes(term));
+
+        list.innerHTML = items.length ? items.map((product) => `
+          <div class="list-item" style="grid-template-columns: 1.3fr 0.7fr 0.7fr 0.9fr;">
+            <div>
+              <div class="name">${escapeHtml(product.name)}</div>
+              <div class="muted">${escapeHtml(product.category)}</div>
+            </div>
+            <div>${money(product.price)}</div>
+            <input class="field" type="number" min="0" step="0.01" value="${product.price}" data-price-input="${product.id}" />
+            <button class="primary-btn" data-price-save="${product.id}">SALVAR</button>
+          </div>
+        `).join("") : `<div class="helper">Nenhum produto encontrado.</div>`;
+
+        list.querySelectorAll("[data-price-save]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const input = list.querySelector(`[data-price-input="${button.dataset.priceSave}"]`);
+            const product = getProduct(button.dataset.priceSave);
+            if (!product) return;
+            const previousPrice = product.price;
+            product.price = Number(input.value);
+            await persistProducts();
+            await recordActivity("price_change", `Preço alterado: ${product.name}.`, {
+              productId: product.id,
+              previousPrice,
+              newPrice: product.price
+            });
+            renderAll();
+            renderList();
+            showToast("Preço atualizado.");
+          });
+        });
+      };
+
+      search.addEventListener("input", renderList);
+      renderList();
+    }
+
+    function openLowStockModal() {
+      const lowStock = state.products
+        .filter((product) => product.stock <= product.minStock)
+        .sort((a, b) => a.stock - b.stock);
+
+      const node = document.createElement("div");
+      node.className = "stack";
+      node.innerHTML = `
+        <div class="helper">Produtos com estoque igual ou abaixo do mínimo cadastrado.</div>
+        <div class="compact-list">
+          ${lowStock.length ? lowStock.map((product) => `
+            <div class="list-item">
+              <div>
+                <div class="name">${escapeHtml(product.name)}</div>
+                <div class="muted">${escapeHtml(product.category)}</div>
+              </div>
+              <div>Atual: ${product.stock}</div>
+              <div>Mín.: ${product.minStock}</div>
+              <div>${money(product.price)}</div>
+            </div>
+          `).join("") : `<div class="helper">Nenhum produto em nível crítico de estoque.</div>`}
+        </div>
+      `;
+
+      openModal("Lista de compras", "Acompanhe os itens que precisam ser repostos.", node);
+    }
+
+    function openSettingsModal() {
+      const form = document.createElement("form");
+      form.className = "stack";
+      form.innerHTML = `
+        <div class="form-grid">
+          <div class="field-group">
+            <label class="field-label">Nome da banca</label>
+            <input class="field" name="bankName" value="${escapeHtml(state.config.bankName || "")}" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Nome do recebedor PIX</label>
+            <input class="field" name="merchantName" value="${escapeHtml(state.config.merchantName || "")}" maxlength="25" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Cidade</label>
+            <input class="field" name="city" value="${escapeHtml(state.config.city || "")}" maxlength="15" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Chave PIX</label>
+            <input class="field" name="pixKey" value="${escapeHtml(state.config.pixKey || "")}" placeholder="cpf, email, telefone ou chave aleatória" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">WhatsApp para envio</label>
+            <input class="field" name="whatsappNumber" value="${escapeHtml(state.config.whatsappNumber || "")}" placeholder="5511999999999" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" id="cancelSettings">Cancelar</button>
+          <button type="submit" class="success-btn" style="width:auto; padding:0 18px;">SALVAR</button>
+        </div>
+      `;
+
+      openModal("Configurações", "Defina o nome da banca, a chave PIX e o WhatsApp usado no QR Code.", form);
+      form.querySelector("#cancelSettings").addEventListener("click", closeModal);
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        state.config = {
+          bankName: data.bankName.trim(),
+          merchantName: data.merchantName.trim().toUpperCase().slice(0, 25),
+          city: data.city.trim().toUpperCase().slice(0, 15),
+          pixKey: data.pixKey.trim(),
+          whatsappNumber: data.whatsappNumber.trim(),
+        };
+        await persistConfig();
+        renderAll();
+        closeModal();
+        showToast("Configurações salvas.");
+      });
+    }
+
+    function openPixModal() {
+      if (state.cart.length === 0) {
+        showToast("Adicione itens ao carrinho para gerar o PIX.");
+        return;
+      }
+
+      if (!state.config.pixKey) {
+        showToast("Configure a chave PIX antes de gerar o QR Code.");
+        openSettingsModal();
+        return;
+      }
+
+      const wrap = document.createElement("div");
+      wrap.className = "stack";
+      wrap.innerHTML = `
+        <div class="report-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+          <div class="report-card"><div class="label">Total da venda</div><div class="value">${money(cartTotal())}</div></div>
+          <div class="report-card"><div class="label">Banca</div><div class="value" style="font-size:1rem;">${escapeHtml(state.config.bankName || "")}</div></div>
+          <div class="report-card"><div class="label">PIX</div><div class="value" style="font-size:1rem;">${escapeHtml(state.config.pixKey)}</div></div>
+        </div>
+        <div style="display:grid; grid-template-columns: 320px 1fr; gap: 16px; align-items:start;">
+          <div class="report-box" style="min-height: 320px; display:grid; place-items:center;">
+            <div id="qrcodeArea"></div>
+          </div>
+          <div class="report-box">
+            <h4>PIX copia e cola</h4>
+            <textarea class="text-area" id="pixPayload" rows="10" readonly></textarea>
+            <div class="modal-actions" style="margin-top:12px; justify-content:flex-start;">
+              <button class="primary-btn" id="copyPix" type="button" style="width:auto; padding:0 16px;">COPIAR</button>
+              <button class="ghost-btn" id="closePix" type="button">Fechar</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      openModal("Gerar QR Code PIX", "O QR Code é montado com o valor total do carrinho.", wrap);
+
+      const payload = buildPixPayload({
+        key: state.config.pixKey,
+        merchantName: state.config.merchantName || state.config.bankName || "PDV BANCA",
+        city: state.config.city || "SAO PAULO",
+        amount: cartTotal()
+      });
+
+      wrap.querySelector("#pixPayload").value = payload;
+      wrap.querySelector("#closePix").addEventListener("click", closeModal);
+      wrap.querySelector("#copyPix").addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(payload);
+          showToast("PIX copiado para a área de transferência.");
+        } catch {
+          showToast("Não foi possível copiar automaticamente.");
+        }
+      });
+
+      const qrTarget = wrap.querySelector("#qrcodeArea");
+      state.qrCodeInstance = new QRCode(qrTarget, {
+        text: payload,
+        width: 260,
+        height: 260,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    function openReportModal() {
+      const today = todayDateInputValue();
+      const form = document.createElement("form");
+      form.className = "stack";
+      let currentFilteredSales = [];
+      form.innerHTML = `
+        <div class="form-grid three">
+          <div class="field-group">
+            <label class="field-label">Data inicial</label>
+            <input class="date-input" type="date" name="startDate" value="${today}" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Data final</label>
+            <input class="date-input" type="date" name="endDate" value="${today}" required />
+          </div>
+          <div class="field-group" style="align-self:end;">
+            <button class="primary-btn" type="submit">FILTRAR</button>
+          </div>
+        </div>
+        <div class="modal-actions" style="justify-content:flex-start; margin-top:-2px;">
+          <button class="ghost-btn" type="button" id="exportSalesCsv">EXPORTAR CSV</button>
+        </div>
+        <div id="reportResult"></div>
+      `;
+
+      const renderReport = (startDate, endDate) => {
+        const start = new Date(`${startDate}T00:00:00`);
+        const end = new Date(`${endDate}T23:59:59.999`);
+        const sales = state.sales.filter((sale) => {
+          const saleDate = new Date(sale.date);
+          return saleDate >= start && saleDate <= end;
+        });
+        currentFilteredSales = sales;
+        const todayStart = new Date(`${todayDateInputValue()}T00:00:00`);
+        const todayEnd = new Date(`${todayDateInputValue()}T23:59:59.999`);
+        const todaysSales = state.sales.filter((sale) => {
+          const saleDate = new Date(sale.date);
+          return saleDate >= todayStart && saleDate <= todayEnd;
+        });
+        const total = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+        const todayTotal = todaysSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+        const paymentSummary = sales.reduce((accumulator, sale) => {
+          const key = String(sale.paymentMethod || "desconhecido").toLowerCase();
+          accumulator[key] = accumulator[key] || { count: 0, total: 0 };
+          accumulator[key].count += 1;
+          accumulator[key].total += Number(sale.total || 0);
+          return accumulator;
+        }, {});
+        const soldMap = new Map();
+        sales.forEach((sale) => {
+          sale.items.forEach((item) => {
+            const current = soldMap.get(item.productId) || { name: item.name, quantity: 0, total: 0 };
+            current.quantity += item.quantity;
+            current.total += item.quantity * item.price;
+            soldMap.set(item.productId, current);
+          });
+        });
+        const ranking = [...soldMap.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 8);
+        const paymentCards = ["debito", "credito", "pix"].map((method) => {
+          const summary = paymentSummary[method] || { count: 0, total: 0 };
+          return `
+            <div class="report-card">
+              <div class="label">${formatPaymentMethod(method)}</div>
+              <div class="value">${summary.count}</div>
+              <div class="helper">${money(summary.total)}</div>
+            </div>
+          `;
+        }).join("");
+        const recentActivity = state.activityLogs.slice(0, 8);
+
+        return `
+          <div class="report-grid">
+            <div class="report-card"><div class="label">Vendas no período</div><div class="value">${sales.length}</div></div>
+            <div class="report-card"><div class="label">Total arrecadado</div><div class="value">${money(total)}</div></div>
+            <div class="report-card"><div class="label">Vendas do dia</div><div class="value">${todaysSales.length}</div></div>
+            <div class="report-card"><div class="label">Total do dia</div><div class="value">${money(todayTotal)}</div></div>
+          </div>
+          <div class="report-columns">
+            <div class="report-box">
+              <h4>Fechamento de caixa</h4>
+              <div class="report-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 10px;">
+                ${paymentCards}
+              </div>
+              <div class="helper">Resumo por forma de pagamento no período selecionado.</div>
+            </div>
+            <div class="report-box">
+              <h4>Produtos mais vendidos</h4>
+              ${ranking.length ? ranking.map((item, index) => `
+                <div class="ranking-item">
+                  <div><strong>${index + 1}. ${escapeHtml(item.name)}</strong></div>
+                  <div>${item.quantity} un. - ${money(item.total)}</div>
+                </div>
+              `).join("") : `<div class="helper">Sem vendas no período selecionado.</div>`}
+            </div>
+            <div class="report-box">
+              <h4>Histórico no período</h4>
+              ${sales.length ? sales.map((sale) => `
+                <div class="ranking-item">
+                  <div>
+                    <strong>${formatDateTime(sale.date)}</strong><br />
+                    <span class="helper">${sale.items.length} item(ns) · ${formatPaymentMethod(sale.paymentMethod)}</span>
+                  </div>
+                  <div>${money(sale.total)}</div>
+                </div>
+              `).join("") : `<div class="helper">Nenhuma venda encontrada para esse filtro.</div>`}
+            </div>
+            <div class="report-box">
+              <h4>Auditoria recente</h4>
+              ${recentActivity.length ? recentActivity.map((entry) => `
+                <div class="ranking-item">
+                  <div>
+                    <strong>${escapeHtml(entry.type || "atividade")}</strong><br />
+                    <span class="helper">${escapeHtml(entry.message || "")}</span>
+                  </div>
+                  <div>${formatDateTime(entry.date)}</div>
+                </div>
+              `).join("") : `<div class="helper">Sem movimentações registradas ainda.</div>`}
+            </div>
+          </div>
+        `;
+      };
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        form.querySelector("#reportResult").innerHTML = renderReport(data.startDate, data.endDate);
+      });
+
+      form.querySelector("#exportSalesCsv").addEventListener("click", () => {
+        const salesToExport = currentFilteredSales.length ? currentFilteredSales : state.sales;
+        const csv = buildSalesCsv(salesToExport);
+        const stamp = todayDateInputValue().replace(/-/g, "");
+        downloadTextFile(`vendas-${stamp}.csv`, csv, "text/csv;charset=utf-8");
+        showToast("CSV exportado com sucesso.");
+      });
+
+      openModal("Relatório de vendas", "Acompanhe vendas do dia atual e filtre por período.", form);
+      form.querySelector("#reportResult").innerHTML = renderReport(today, today);
+    }
+
+    function buildPixPayload({ key, merchantName, city, amount }) {
+      const sanitizedName = normalizePixField(merchantName || "PDV BANCA", 25);
+      const sanitizedCity = normalizePixField(city || "SAO PAULO", 15);
+      const value = Number(amount || 0).toFixed(2);
+      const payload = [
+        tlv("00", "01"),
+        tlv("26", tlv("00", "br.gov.bcb.pix") + tlv("01", key)),
+        tlv("52", "0000"),
+        tlv("53", "986"),
+        tlv("54", value),
+        tlv("58", "BR"),
+        tlv("59", sanitizedName),
+        tlv("60", sanitizedCity),
+        tlv("62", tlv("05", "***"))
+      ].join("");
+      return payload + tlv("63", crc16(payload + "6304"));
+    }
+
+    function normalizePixField(value, maxLength) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/[^A-Z0-9 \-\.]/g, "")
+        .slice(0, maxLength)
+        .trim();
+    }
+
+    function tlv(id, value) {
+      const text = String(value || "");
+      const length = String(text.length).padStart(2, "0");
+      return `${id}${length}${text}`;
+    }
+
+    function crc16(payload) {
+      let crc = 0xFFFF;
+      for (let i = 0; i < payload.length; i++) {
+        crc ^= payload.charCodeAt(i) << 8;
+        for (let j = 0; j < 8; j++) {
+          if (crc & 0x8000) {
+            crc = (crc << 1) ^ 0x1021;
+          } else {
+            crc <<= 1;
+          }
+          crc &= 0xFFFF;
+        }
+      }
+      return crc.toString(16).toUpperCase().padStart(4, "0");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="supabase-browser.js"></script>
+</body>
+</html>
