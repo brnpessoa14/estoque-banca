@@ -1,5 +1,6 @@
 import http.cookiejar
 import json
+import sqlite3
 import tempfile
 import threading
 import unittest
@@ -74,6 +75,11 @@ class BancaApiTests(unittest.TestCase):
         self.assertEqual(data["user"]["email"], start.DEMO_EMAIL)
         self.assertEqual(len(data["products"]), len(start.DEMO_PRODUCTS))
         self.assertEqual(data["settings"]["businessName"], "Banca Central")
+        with start.connect_db(self.server.db_path) as database:
+            iterations = database.execute(
+                "SELECT password_iterations FROM users WHERE email = ?", (start.DEMO_EMAIL,)
+            ).fetchone()["password_iterations"]
+        self.assertEqual(iterations, start.PASSWORD_ITERATIONS)
 
     def test_03_invalid_login_is_rejected(self):
         client = ApiClient(self.base_url)
@@ -194,6 +200,47 @@ class BancaApiTests(unittest.TestCase):
             method="POST",
             data={"email": "carlos@example.com", "password": "SenhaNova5678"},
         )
+
+    def test_07_legacy_password_hash_is_migrated_without_lockout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "legacy.sqlite3"
+            salt, digest = start.hash_password(
+                "SenhaAntiga123", iterations=start.LEGACY_PASSWORD_ITERATIONS
+            )
+            database = sqlite3.connect(str(path))
+            database.execute(
+                """
+                CREATE TABLE users (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    email TEXT NOT NULL UNIQUE,
+                    password_salt TEXT NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            database.execute(
+                "INSERT INTO users(id, name, email, password_salt, password_hash, created_at) VALUES(?,?,?,?,?,?)",
+                ("legacy-user", "Conta Legada", "legacy@example.com", salt, digest, start.utc_now()),
+            )
+            database.commit()
+            database.close()
+
+            start.init_db(path)
+            with start.connect_db(path) as migrated:
+                user = migrated.execute(
+                    "SELECT * FROM users WHERE email = ?", ("legacy@example.com",)
+                ).fetchone()
+            self.assertEqual(user["password_iterations"], start.LEGACY_PASSWORD_ITERATIONS)
+            self.assertTrue(
+                start.verify_password(
+                    "SenhaAntiga123",
+                    user["password_salt"],
+                    user["password_hash"],
+                    user["password_iterations"],
+                )
+            )
 
 
 if __name__ == "__main__":

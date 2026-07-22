@@ -29,6 +29,8 @@ SESSION_SECONDS = 60 * 60 * 24 * 7
 MAX_BODY_SIZE = 1_000_000
 DEMO_EMAIL = "cliente@bancafacil.com.br"
 DEMO_PASSWORD = "Cliente@123"
+PASSWORD_ITERATIONS = 600_000
+LEGACY_PASSWORD_ITERATIONS = 310_000
 
 
 class ApiError(Exception):
@@ -46,16 +48,25 @@ def normalize_email(value: Any) -> str:
     return str(value or "").strip().lower()
 
 
-def hash_password(password: str, salt: Optional[bytes] = None) -> Tuple[str, str]:
+def hash_password(
+    password: str,
+    salt: Optional[bytes] = None,
+    iterations: int = PASSWORD_ITERATIONS,
+) -> Tuple[str, str]:
     salt = salt or secrets.token_bytes(16)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 310_000)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
     return base64.b64encode(salt).decode("ascii"), base64.b64encode(digest).decode("ascii")
 
 
-def verify_password(password: str, salt_text: str, digest_text: str) -> bool:
+def verify_password(
+    password: str,
+    salt_text: str,
+    digest_text: str,
+    iterations: int = PASSWORD_ITERATIONS,
+) -> bool:
     salt = base64.b64decode(salt_text)
     expected = base64.b64decode(digest_text)
-    actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 310_000)
+    actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
     return hmac.compare_digest(actual, expected)
 
 
@@ -74,6 +85,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL UNIQUE,
     password_salt TEXT NOT NULL,
     password_hash TEXT NOT NULL,
+    password_iterations INTEGER NOT NULL DEFAULT 600000,
     created_at TEXT NOT NULL
 );
 
@@ -155,6 +167,12 @@ def init_db(path: Path) -> None:
     with connect_db(path) as db:
         db.execute("PRAGMA journal_mode = WAL")
         db.executescript(SCHEMA)
+        user_columns = {row["name"] for row in db.execute("PRAGMA table_info(users)")}
+        if "password_iterations" not in user_columns:
+            db.execute(
+                "ALTER TABLE users ADD COLUMN password_iterations INTEGER NOT NULL DEFAULT %d"
+                % LEGACY_PASSWORD_ITERATIONS
+            )
         demo = db.execute("SELECT id FROM users WHERE email = ?", (DEMO_EMAIL,)).fetchone()
         if demo:
             return
@@ -162,8 +180,8 @@ def init_db(path: Path) -> None:
         salt, digest = hash_password(DEMO_PASSWORD)
         now = utc_now()
         db.execute(
-            "INSERT INTO users(id, name, email, password_salt, password_hash, created_at) VALUES(?,?,?,?,?,?)",
-            (user_id, "Cliente Demonstração", DEMO_EMAIL, salt, digest, now),
+            "INSERT INTO users(id, name, email, password_salt, password_hash, password_iterations, created_at) VALUES(?,?,?,?,?,?,?)",
+            (user_id, "Cliente Demonstração", DEMO_EMAIL, salt, digest, PASSWORD_ITERATIONS, now),
         )
         db.execute(
             "INSERT INTO settings(user_id, business_name, merchant_name, city, pix_key, whatsapp, updated_at) VALUES(?,?,?,?,?,?,?)",
@@ -460,8 +478,8 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         salt, digest = hash_password(password)
         now = utc_now()
         db.execute(
-            "INSERT INTO users(id, name, email, password_salt, password_hash, created_at) VALUES(?,?,?,?,?,?)",
-            (user_id, name, email, salt, digest, now),
+            "INSERT INTO users(id, name, email, password_salt, password_hash, password_iterations, created_at) VALUES(?,?,?,?,?,?,?)",
+            (user_id, name, email, salt, digest, PASSWORD_ITERATIONS, now),
         )
         db.execute(
             "INSERT INTO settings(user_id, business_name, merchant_name, city, pix_key, whatsapp, updated_at) VALUES(?,?,?,?,?,?,?)",
@@ -478,7 +496,12 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         email = normalize_email(data.get("email"))
         password = str(data.get("password") or "")
         user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-        if not user or not verify_password(password, user["password_salt"], user["password_hash"]):
+        if not user or not verify_password(
+            password,
+            user["password_salt"],
+            user["password_hash"],
+            user["password_iterations"],
+        ):
             time.sleep(0.15)
             raise ApiError(401, "E-mail ou senha incorretos.")
         token = self._create_session(db, user["id"])
@@ -667,12 +690,20 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         data = self._body()
         current = str(data.get("currentPassword") or "")
         new = str(data.get("newPassword") or "")
-        if not verify_password(current, user["password_salt"], user["password_hash"]):
+        if not verify_password(
+            current,
+            user["password_salt"],
+            user["password_hash"],
+            user["password_iterations"],
+        ):
             raise ApiError(401, "A senha atual está incorreta.")
         if len(new) < 8 or not re.search(r"[A-Za-z]", new) or not re.search(r"\d", new):
             raise ApiError(400, "A nova senha deve ter ao menos 8 caracteres, uma letra e um número.")
         salt, digest = hash_password(new)
-        db.execute("UPDATE users SET password_salt=?, password_hash=? WHERE id=?", (salt, digest, user["id"]))
+        db.execute(
+            "UPDATE users SET password_salt=?, password_hash=?, password_iterations=? WHERE id=?",
+            (salt, digest, PASSWORD_ITERATIONS, user["id"]),
+        )
         jar = cookies.SimpleCookie(self.headers.get("Cookie", ""))
         current_session = jar.get(COOKIE_NAME)
         if current_session and current_session.value:

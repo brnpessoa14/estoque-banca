@@ -80,4 +80,4 @@ tests/test_app.py   Testes de integração
 start.bat           Inicialização no Windows
 ```
 
-Consulte [QUICKSTART.md](QUICKSTART.md) para um roteiro curto de primeira utilização.
+Consulte [QUICKSTART.md](QUICKSTART.md) para um roteiro curto de primeira utilização e [DOCUMENTACAO.md](DOCUMENTACAO.md) para instalação, arquitetura, banco, API, segurança, backup, testes, produção e solução de problemas.
