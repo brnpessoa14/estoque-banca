@@ -1,5 +1,7 @@
 # Início rápido
 
+Produção: [https://estoque-banca.vercel.app](https://estoque-banca.vercel.app). Os passos abaixo também permitem executar uma instalação local independente.
+
 ## 1. Inicie o sistema
 
 macOS ou Linux:
@@ -40,5 +42,6 @@ Também é possível selecionar **Criar conta** e cadastrar outro cliente. Cada 
 - Porta ocupada: execute `python3 start.py --port 9000`.
 - Navegador não abriu: acesse `http://127.0.0.1:8000`.
 - Esqueceu uma senha criada por você: restaure um backup do banco ou crie outra conta; senhas não podem ser recuperadas em texto puro.
-- Banco: o arquivo fica em `data/banca.sqlite3` e é criado automaticamente.
+- Banco local: o arquivo fica em `data/banca.sqlite3` e é criado automaticamente.
+- Banco online: PostgreSQL Neon, configurado no Vercel por `DATABASE_URL`.
 - Testes: execute `python3 -m unittest discover -s tests -v`.

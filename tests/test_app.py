@@ -242,6 +242,27 @@ class BancaApiTests(unittest.TestCase):
                 )
             )
 
+            server = start.create_server("127.0.0.1", 0, path)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                client = ApiClient("http://127.0.0.1:%d" % server.server_address[1])
+                client.request(
+                    "/api/auth/login",
+                    method="POST",
+                    data={"email": "legacy@example.com", "password": "SenhaAntiga123"},
+                )
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=3)
+            with start.connect_db(path) as migrated:
+                upgraded = migrated.execute(
+                    "SELECT password_iterations FROM users WHERE email = ?",
+                    ("legacy@example.com",),
+                ).fetchone()
+            self.assertEqual(upgraded["password_iterations"], start.PASSWORD_ITERATIONS)
+
 
 if __name__ == "__main__":
     unittest.main()

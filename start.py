@@ -19,7 +19,7 @@ from http import cookies
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 
 ROOT = Path(__file__).resolve().parent
@@ -235,7 +235,7 @@ def clean_product_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def product_json(row: sqlite3.Row) -> Dict[str, Any]:
+def product_json(row: Any) -> Dict[str, Any]:
     return {
         "id": row["id"],
         "name": row["name"],
@@ -249,7 +249,7 @@ def product_json(row: sqlite3.Row) -> Dict[str, Any]:
     }
 
 
-def log_activity(db: sqlite3.Connection, user_id: str, kind: str, message: str) -> None:
+def log_activity(db: Any, user_id: str, kind: str, message: str) -> None:
     db.execute(
         "INSERT INTO activity_logs(user_id, type, message, created_at) VALUES(?,?,?,?)",
         (user_id, kind, message, utc_now()),
@@ -325,7 +325,27 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         self._handle_api("DELETE")
 
     def _is_api(self) -> bool:
-        return urlparse(self.path).path.startswith("/api/")
+        path = urlparse(self.path).path
+        return path == "/api" or path.startswith("/api/")
+
+    def _api_path(self) -> str:
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+        if path == "/api":
+            route = parse_qs(parsed.query).get("route", [""])[0].strip("/")
+            if route:
+                path = "/api/" + route
+        return path
+
+    def _database(self) -> Any:
+        return connect_db(self.server.db_path)
+
+    @staticmethod
+    def _is_integrity_error(error: Exception) -> bool:
+        return isinstance(error, sqlite3.IntegrityError)
+
+    def _cookie_is_secure(self) -> bool:
+        return False
 
     def _json(self, status: int, payload: Dict[str, Any], extra_headers: Optional[List[Tuple[str, str]]] = None) -> None:
         raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -369,6 +389,8 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         jar[COOKIE_NAME]["httponly"] = True
         jar[COOKIE_NAME]["samesite"] = "Strict"
         jar[COOKIE_NAME]["max-age"] = SESSION_SECONDS
+        if self._cookie_is_secure():
+            jar[COOKIE_NAME]["secure"] = True
         return jar.output(header="").strip()
 
     def _clear_cookie(self) -> str:
@@ -378,9 +400,11 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         jar[COOKIE_NAME]["httponly"] = True
         jar[COOKIE_NAME]["samesite"] = "Strict"
         jar[COOKIE_NAME]["max-age"] = 0
+        if self._cookie_is_secure():
+            jar[COOKIE_NAME]["secure"] = True
         return jar.output(header="").strip()
 
-    def _current_user(self, db: sqlite3.Connection) -> sqlite3.Row:
+    def _current_user(self, db: Any) -> Any:
         raw_cookie = self.headers.get("Cookie", "")
         jar = cookies.SimpleCookie()
         try:
@@ -399,7 +423,7 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
             raise ApiError(401, "Sua sessão expirou. Entre novamente.")
         return row
 
-    def _create_session(self, db: sqlite3.Connection, user_id: str) -> str:
+    def _create_session(self, db: Any, user_id: str) -> str:
         token = secrets.token_urlsafe(40)
         token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
         db.execute("DELETE FROM sessions WHERE expires_at <= ?", (int(time.time()),))
@@ -415,8 +439,8 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
                 raise ApiError(404, "Rota não encontrada.")
             if method != "GET":
                 self._same_origin()
-            path = urlparse(self.path).path.rstrip("/") or "/"
-            with connect_db(self.server.db_path) as db:
+            path = self._api_path()
+            with self._database() as db:
                 if path == "/api/health" and method == "GET":
                     self._json(200, {"ok": True, "database": "connected"})
                     return
@@ -451,17 +475,18 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
                     raise ApiError(404, "Rota não encontrada.")
         except ApiError as error:
             self._json(error.status, {"error": error.message})
-        except sqlite3.IntegrityError:
-            self._json(409, {"error": "Não foi possível concluir: já existe um registro com esses dados."})
         except Exception as error:
+            if self._is_integrity_error(error):
+                self._json(409, {"error": "Não foi possível concluir: já existe um registro com esses dados."})
+                return
             print("Erro interno:", repr(error))
             self._json(500, {"error": "Ocorreu um erro interno. Tente novamente."})
 
     @staticmethod
-    def _user_json(row: sqlite3.Row) -> Dict[str, Any]:
+    def _user_json(row: Any) -> Dict[str, Any]:
         return {"id": row["id"], "name": row["name"], "email": row["email"], "createdAt": row["created_at"]}
 
-    def _register(self, db: sqlite3.Connection) -> None:
+    def _register(self, db: Any) -> None:
         data = self._body()
         name = str(data.get("name") or "").strip()
         email = normalize_email(data.get("email"))
@@ -491,7 +516,7 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         db.commit()
         self._json(201, {"user": self._user_json(user)}, [("Set-Cookie", self._session_cookie(token))])
 
-    def _login(self, db: sqlite3.Connection) -> None:
+    def _login(self, db: Any) -> None:
         data = self._body()
         email = normalize_email(data.get("email"))
         password = str(data.get("password") or "")
@@ -504,12 +529,18 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         ):
             time.sleep(0.15)
             raise ApiError(401, "E-mail ou senha incorretos.")
+        if user["password_iterations"] < PASSWORD_ITERATIONS:
+            salt, digest = hash_password(password)
+            db.execute(
+                "UPDATE users SET password_salt=?, password_hash=?, password_iterations=? WHERE id=?",
+                (salt, digest, PASSWORD_ITERATIONS, user["id"]),
+            )
         token = self._create_session(db, user["id"])
         log_activity(db, user["id"], "login", "Acesso realizado.")
         db.commit()
         self._json(200, {"user": self._user_json(user)}, [("Set-Cookie", self._session_cookie(token))])
 
-    def _logout(self, db: sqlite3.Connection) -> None:
+    def _logout(self, db: Any) -> None:
         raw_cookie = self.headers.get("Cookie", "")
         jar = cookies.SimpleCookie(raw_cookie)
         morsel = jar.get(COOKIE_NAME)
@@ -519,7 +550,7 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         db.commit()
         self._json(200, {"ok": True}, [("Set-Cookie", self._clear_cookie())])
 
-    def _bootstrap(self, db: sqlite3.Connection, user: sqlite3.Row) -> None:
+    def _bootstrap(self, db: Any, user: Any) -> None:
         user_id = user["id"]
         products = [product_json(row) for row in db.execute("SELECT * FROM products WHERE user_id = ? ORDER BY name", (user_id,))]
         sale_rows = db.execute("SELECT * FROM sales WHERE user_id = ? ORDER BY created_at DESC LIMIT 500", (user_id,)).fetchall()
@@ -568,7 +599,7 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
             },
         })
 
-    def _create_product(self, db: sqlite3.Connection, user: sqlite3.Row) -> None:
+    def _create_product(self, db: Any, user: Any) -> None:
         payload = clean_product_payload(self._body())
         product_id = str(uuid.uuid4())
         now = utc_now()
@@ -581,13 +612,16 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         db.commit()
         self._json(201, {"product": product_json(row)})
 
-    def _find_product(self, db: sqlite3.Connection, user_id: str, product_id: str) -> sqlite3.Row:
-        row = db.execute("SELECT * FROM products WHERE id = ? AND user_id = ?", (product_id, user_id)).fetchone()
+    def _find_product(self, db: Any, user_id: str, product_id: str, for_update: bool = False) -> Any:
+        query = "SELECT * FROM products WHERE id = ? AND user_id = ?"
+        if for_update and getattr(db, "dialect", "sqlite") == "postgres":
+            query += " FOR UPDATE"
+        row = db.execute(query, (product_id, user_id)).fetchone()
         if not row:
             raise ApiError(404, "Produto não encontrado.")
         return row
 
-    def _update_product(self, db: sqlite3.Connection, user: sqlite3.Row, product_id: str) -> None:
+    def _update_product(self, db: Any, user: Any, product_id: str) -> None:
         previous = self._find_product(db, user["id"], product_id)
         data = self._body()
         merged = {
@@ -608,14 +642,14 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         db.commit()
         self._json(200, {"product": product_json(row)})
 
-    def _delete_product(self, db: sqlite3.Connection, user: sqlite3.Row, product_id: str) -> None:
+    def _delete_product(self, db: Any, user: Any, product_id: str) -> None:
         product = self._find_product(db, user["id"], product_id)
         db.execute("DELETE FROM products WHERE id = ? AND user_id = ?", (product_id, user["id"]))
         log_activity(db, user["id"], "product_deleted", "Produto removido: %s." % product["name"])
         db.commit()
         self._json(200, {"ok": True})
 
-    def _create_sale(self, db: sqlite3.Connection, user: sqlite3.Row) -> None:
+    def _create_sale(self, db: Any, user: Any) -> None:
         data = self._body()
         items = data.get("items")
         payment = str(data.get("paymentMethod") or "").lower()
@@ -635,11 +669,12 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
             if quantity <= 0 or quantity > 10_000:
                 raise ApiError(400, "Quantidade inválida.")
             normalized[product_id] = normalized.get(product_id, 0) + quantity
-        db.execute("BEGIN IMMEDIATE")
-        resolved: List[Tuple[sqlite3.Row, int]] = []
+        if getattr(db, "dialect", "sqlite") == "sqlite":
+            db.execute("BEGIN IMMEDIATE")
+        resolved: List[Tuple[Any, int]] = []
         total_cents = 0
         for product_id, quantity in normalized.items():
-            product = self._find_product(db, user["id"], product_id)
+            product = self._find_product(db, user["id"], product_id, for_update=True)
             if product["stock"] < quantity:
                 raise ApiError(409, "Estoque insuficiente para %s." % product["name"])
             total_cents += product["price_cents"] * quantity
@@ -663,7 +698,7 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         db.commit()
         self._json(201, {"sale": {"id": sale_id, "total": total_cents / 100, "paymentMethod": payment, "createdAt": now}})
 
-    def _update_settings(self, db: sqlite3.Connection, user: sqlite3.Row) -> None:
+    def _update_settings(self, db: Any, user: Any) -> None:
         data = self._body()
         business_name = str(data.get("businessName") or "").strip()
         merchant_name = str(data.get("merchantName") or "").strip().upper()
@@ -686,7 +721,7 @@ class BancaRequestHandler(SimpleHTTPRequestHandler):
         db.commit()
         self._json(200, {"ok": True})
 
-    def _change_password(self, db: sqlite3.Connection, user: sqlite3.Row) -> None:
+    def _change_password(self, db: Any, user: Any) -> None:
         data = self._body()
         current = str(data.get("currentPassword") or "")
         new = str(data.get("newPassword") or "")

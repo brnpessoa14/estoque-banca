@@ -1,6 +1,8 @@
 # Banca Fácil
 
-Sistema local de frente de caixa, estoque e relatórios para bancas. A aplicação agora inclui backend próprio, banco SQLite e autenticação por conta — sem depender de Supabase, Node.js ou serviços pagos.
+Sistema de frente de caixa, estoque e relatórios para bancas. Pode ser usado localmente com Python e SQLite ou publicado no Vercel com Python Functions e PostgreSQL Neon. A aplicação inclui autenticação e isolamento completo dos dados por conta.
+
+**Produção:** [estoque-banca.vercel.app](https://estoque-banca.vercel.app)
 
 ## Começar
 
@@ -35,9 +37,9 @@ A conta é criada automaticamente na primeira inicialização, junto com seis pr
 - alteração segura de senha;
 - interface responsiva para computador, tablet e celular.
 
-## Banco de dados
+## Bancos de dados
 
-O SQLite é inicializado automaticamente em `data/banca.sqlite3`. O schema contém usuários, sessões, produtos, vendas, itens de venda, configurações e atividades. Senhas usam PBKDF2-HMAC-SHA256 com salt individual; tokens de sessão são aleatórios e só o hash é persistido.
+No uso local, o SQLite é inicializado automaticamente em `data/banca.sqlite3`. No Vercel, a função em `api/index.py` usa PostgreSQL Neon pela variável secreta `DATABASE_URL`. Os dois schemas contêm usuários, sessões, produtos, vendas, itens, configurações e atividades. Senhas usam PBKDF2-HMAC-SHA256 com salt individual; tokens de sessão são aleatórios e somente o hash é persistido.
 
 O arquivo do banco não é versionado para evitar publicar dados de clientes. Para fazer backup:
 
@@ -57,7 +59,19 @@ python3 start.py --db /caminho/seguro/minha-banca.sqlite3
 python3 -m unittest discover -s tests -v
 ```
 
-Os testes cobrem saúde da API, proteção de rotas, conta demo, credenciais inválidas, criação de conta, CRUD de produto, venda e baixa transacional, estoque insuficiente, isolamento entre clientes, configurações, troca de senha e logout.
+Os testes cobrem saúde da API, proteção de rotas, conta demo, credenciais inválidas, criação de conta, CRUD de produto, venda e baixa transacional, estoque insuficiente, isolamento entre clientes, configurações, troca de senha e logout. O teste PostgreSQL é executado quando `DATABASE_URL` está definida.
+
+## Deploy no Vercel
+
+O projeto já contém `vercel.json`, build restrito aos arquivos públicos e API Python serverless. O PostgreSQL deve estar conectado aos ambientes Development, Preview e Production.
+
+```bash
+vercel pull
+vercel deploy          # preview
+vercel deploy --prod   # produção manual
+```
+
+O fluxo normal é fazer push de uma branch, validar o preview e mesclar na `main`; a integração Git do Vercel publica a produção automaticamente. Consulte o passo a passo e a manutenção do banco em [DOCUMENTACAO.md](DOCUMENTACAO.md#18-publicação-e-produção).
 
 ## Opções do servidor
 
@@ -76,7 +90,11 @@ index.html          Interface e estrutura das telas
 styles.css          Sistema visual e responsividade
 app.js              Estado da interface e integração com a API
 start.py            Servidor HTTP, API, autenticação e SQLite
-tests/test_app.py   Testes de integração
+api/index.py        Function serverless e adaptação PostgreSQL
+vercel.json         Build, rotas, região e cabeçalhos de segurança
+build.mjs           Gera o diretório público do deploy
+requirements.txt    Dependência Python do PostgreSQL
+tests/              Testes SQLite e PostgreSQL
 start.bat           Inicialização no Windows
 ```
 

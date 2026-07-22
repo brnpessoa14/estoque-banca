@@ -2,7 +2,7 @@
 
 Este documento explica como instalar, usar, manter, testar e evoluir o Banca Fácil. Ele também descreve a arquitetura, o banco de dados, a API, as decisões de segurança e os limites atuais do projeto.
 
-> **Resumo:** o Banca Fácil é um sistema local de frente de caixa e estoque. A interface roda no navegador, a API roda em Python e os dados ficam em um arquivo SQLite na própria instalação.
+> **Resumo:** o Banca Fácil é um sistema de frente de caixa e estoque. A interface roda no navegador e a API roda em Python. Localmente os dados ficam em SQLite; na produção Vercel ficam em PostgreSQL Neon persistente.
 
 ## Sumário
 
@@ -32,10 +32,13 @@ Este documento explica como instalar, usar, manter, testar e evoluir o Banca Fá
 ## 1. Links importantes
 
 - [Repositório no GitHub](https://github.com/brnpessoa14/estoque-banca)
+- [Site em produção](https://estoque-banca.vercel.app)
 - [Pull request com a implementação completa](https://github.com/brnpessoa14/estoque-banca/pull/1)
 - [Início rápido](QUICKSTART.md)
 - [Resumo do projeto](README.md)
 - [Servidor, API e banco](start.py)
+- [API serverless e PostgreSQL](api/index.py)
+- [Configuração do Vercel](vercel.json)
 - [Interface HTML](index.html)
 - [Lógica da interface](app.js)
 - [Estilos e responsividade](styles.css)
@@ -241,9 +244,10 @@ O arquivo CSV pode ser aberto no Excel, LibreOffice Calc ou Google Planilhas.
 flowchart LR
     U[Operador no navegador] -->|HTML, CSS e JavaScript| F[Interface]
     F -->|fetch /api/* + cookie de sessão| A[Servidor Python]
-    A -->|consultas e transações| D[(SQLite)]
-    A -->|arquivos públicos permitidos| F
+    A -->|execução local| D[(SQLite)]
+    A -->|Vercel Function| P[(PostgreSQL Neon)]
     D --> B[Backup do arquivo .sqlite3]
+    P --> N[Backups e operação gerenciados no Neon]
 ```
 
 ### Componentes
@@ -252,8 +256,10 @@ flowchart LR
 |---|---|---|
 | Interface | HTML e CSS | Estrutura, acessibilidade, visual e responsividade |
 | Aplicação no navegador | JavaScript | Estado do carrinho, renderização, formulários, relatórios e chamadas HTTP |
-| Backend | Python 3 | Rotas, autenticação, validação, regras de negócio e arquivos públicos |
-| Persistência | SQLite | Usuários, sessões, produtos, vendas, configurações e auditoria |
+| Backend local | Python 3 e `http.server` | Rotas, autenticação, regras de negócio e arquivos públicos |
+| Backend de produção | Vercel Python Function | Executa a mesma API sob demanda com cookie `Secure` |
+| Persistência local | SQLite | Dados do uso no computador da banca |
+| Persistência em produção | PostgreSQL Neon | Dados persistentes do site publicado |
 | QR Code | qrcodejs 1.0.0 | Renderização visual do payload PIX no navegador |
 
 ### Fluxo de uma requisição autenticada
@@ -275,6 +281,12 @@ flowchart LR
 | [`app.js`](app.js) | Estado do frontend, eventos, chamadas da API, PIX e CSV | Ao mudar interação ou consumo da API |
 | [`start.py`](start.py) | Servidor, schema, autenticação, API e regras de negócio | Ao mudar banco, segurança ou comportamento do servidor |
 | [`tests/test_app.py`](tests/test_app.py) | Testes HTTP de integração | Sempre que uma regra ou endpoint mudar |
+| [`api/index.py`](api/index.py) | Entrypoint Vercel, schema e adaptador PostgreSQL | Ao mudar produção ou schema PostgreSQL |
+| [`tests/test_postgres.py`](tests/test_postgres.py) | Fluxo real de cadastro, produto e venda no PostgreSQL | Ao mudar a API serverless |
+| [`vercel.json`](vercel.json) | Rewrite da API, região e cabeçalhos | Ao mudar rotas ou deploy |
+| [`build.mjs`](build.mjs) | Copia somente o frontend para `public/` | Ao adicionar um arquivo público |
+| [`requirements.txt`](requirements.txt) | Dependências da função Python | Ao atualizar o Psycopg |
+| [`package.json`](package.json) | Comandos de build e teste | Ao mudar a automação |
 | [`start.bat`](start.bat) | Inicialização no Windows | Se o comando de inicialização mudar |
 | [`README.md`](README.md) | Apresentação e comandos essenciais | Ao mudar recursos ou requisitos |
 | [`QUICKSTART.md`](QUICKSTART.md) | Primeiro acesso resumido | Ao mudar instalação ou credenciais iniciais |
@@ -288,9 +300,11 @@ Arquivos públicos servidos pelo backend:
 
 Qualquer outro caminho de arquivo recebe HTTP `404`. Isso impede o download do SQLite, do código Python, dos testes e do diretório `.git` pelo navegador.
 
+No Vercel, `build.mjs` copia apenas `index.html`, `styles.css` e `app.js` para o diretório público. O código da API vira uma Function e os demais arquivos não são publicados como conteúdo estático.
+
 ## 8. Banco de dados
 
-### Localização
+### Ambiente local — SQLite
 
 Por padrão:
 
@@ -299,6 +313,12 @@ data/banca.sqlite3
 ```
 
 O diretório e o banco são criados automaticamente. O arquivo está no `.gitignore` e nunca deve ser enviado ao GitHub.
+
+### Vercel — PostgreSQL Neon
+
+Na produção, `api/index.py` abre conexões com a URL presente em `DATABASE_URL`. O schema e a conta de demonstração são criados de forma idempotente, protegidos por advisory lock para evitar duplicação em inicializações simultâneas. A URL é segredo: ela fica nas variáveis do Vercel e nunca deve ser copiada para commits, documentação, logs ou mensagens.
+
+Os ambientes Development, Preview e Production estão conectados ao recurso `estoque-banca-db`, na região de São Paulo (`gru1`). As vendas bloqueiam as linhas de produto com `SELECT ... FOR UPDATE`, evitando que duas requisições concorrentes vendam o mesmo estoque.
 
 ### Tabelas
 
@@ -587,6 +607,7 @@ python3 start.py --db /caminho/seguro/banca.sqlite3
 | `PDV_PORT` | `9000` | Define a porta |
 | `PDV_DB_PATH` | `/dados/banca.sqlite3` | Define o banco |
 | `PDV_OPEN_BROWSER` | `0` | Não abre o navegador |
+| `DATABASE_URL` | definida pelo Vercel/Neon | Conecta a API serverless ao PostgreSQL |
 
 Exemplo:
 
@@ -706,7 +727,7 @@ python3 -m py_compile start.py tests/test_app.py
 - revogação de outras sessões na troca de senha;
 - checagem de origem em operações mutáveis;
 - limite de 1 MB para corpos JSON;
-- consultas parametrizadas no SQLite;
+- consultas parametrizadas no SQLite e PostgreSQL;
 - validação de todos os dados no servidor;
 - preço e total calculados no backend;
 - isolamento por usuário;
@@ -719,9 +740,7 @@ python3 -m py_compile start.py tests/test_app.py
 
 ### O que ainda é necessário para internet pública
 
-- HTTPS obrigatório;
-- atributo `Secure` no cookie;
-- servidor de produção em vez de `http.server`;
+- manter HTTPS obrigatório na publicação (o Vercel já fornece HTTPS);
 - limitação de tentativas de login por IP e conta;
 - recuperação de senha segura;
 - autenticação multifator, se o risco exigir;
@@ -735,23 +754,36 @@ O servidor padrão escuta somente em `127.0.0.1`, reduzindo a exposição. Não 
 
 ## 18. Publicação e produção
 
-### Uso recomendado da versão atual
-
-A versão atual foi desenhada para uma banca usando um computador local. O processo Python deve permanecer aberto enquanto o sistema estiver em uso, e o arquivo SQLite deve estar em disco persistente.
-
 ### Vercel
 
-O frontend pode aparecer em um preview da Vercel, mas a arquitetura atual não funciona integralmente como site estático: `start.py` é um servidor contínuo e o SQLite precisa de armazenamento persistente.
+Produção: [https://estoque-banca.vercel.app](https://estoque-banca.vercel.app).
 
-As [Vercel Functions têm sistema de arquivos somente leitura e `/tmp` temporário](https://vercel.com/docs/functions/runtimes). Para usar Vercel de verdade, seria necessário:
+A publicação usa [Vercel Python Functions](https://vercel.com/docs/functions/runtimes/python), PostgreSQL Neon persistente e HTTPS. Isso é necessário porque o [sistema de arquivos das Functions é somente leitura, exceto pelo `/tmp` temporário](https://vercel.com/docs/functions/runtimes). O cookie de produção recebe `HttpOnly`, `SameSite=Strict` e `Secure`.
 
-1. adaptar a API para o formato de [Vercel Python Functions](https://vercel.com/docs/functions/runtimes/python);
-2. trocar SQLite local por um banco externo persistente, como PostgreSQL gerenciado;
-3. configurar variáveis de ambiente;
-4. habilitar HTTPS e cookie `Secure`;
-5. criar migrações e processo seguro de seed.
+Arquitetura do deploy:
 
-Não coloque o arquivo SQLite dentro do Git para tentar publicá-lo.
+1. `npm run build` executa `build.mjs`;
+2. somente HTML, CSS e JavaScript entram em `public/`;
+3. `vercel.json` reescreve `/api/*` para a Function Python;
+4. `api/index.py` conecta ao Neon por `DATABASE_URL`;
+5. pushes em branches geram previews;
+6. a branch `main` gera a produção.
+
+Com a [Vercel CLI](https://vercel.com/docs/cli), os principais comandos são:
+
+```bash
+vercel pull
+vercel env ls
+vercel deploy
+vercel deploy --prod
+vercel inspect https://estoque-banca.vercel.app
+```
+
+Nunca coloque o SQLite ou a `DATABASE_URL` no Git. A pasta `.vercel`, arquivos `.env*`, `public/` gerado e bancos locais estão no `.gitignore`.
+
+### Banco de produção
+
+O recurso Neon está vinculado aos ambientes de desenvolvimento, preview e produção. Mudanças de schema devem continuar idempotentes ou ser transformadas em migrações versionadas antes de crescer o volume de dados. Acompanhe uso, conexões e backups no painel do Neon acessado pela integração do projeto no Vercel.
 
 ### Servidor próprio ou máquina virtual
 
@@ -766,9 +798,9 @@ Para hospedar sem mudar o SQLite:
 
 O próprio Python alerta que [`http.server` não é recomendado para produção](https://docs.python.org/3/library/http.server.html). Para internet pública, migre a aplicação para um servidor WSGI/ASGI mantido para produção.
 
-### GitHub e pull request
+### GitHub e entrega contínua
 
-As alterações estão no [PR #1](https://github.com/brnpessoa14/estoque-banca/pull/1). Enquanto ele não for mesclado, a branch `main` continua com a versão anterior. Consulte a documentação do GitHub sobre [revisar e mesclar pull requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/merging-a-pull-request).
+O código oficial fica na branch `main`. Desenvolva em uma branch, execute os testes, envie ao GitHub, valide o preview da Vercel e só então faça o merge. Consulte a documentação do GitHub sobre [revisar e mesclar pull requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/merging-a-pull-request).
 
 ## 19. Solução de problemas
 
@@ -937,6 +969,11 @@ Nunca assuma que recriar as tabelas é aceitável, pois isso apagaria dados reai
 - [Mesclar um pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/merging-a-pull-request)
 - [Vercel Python Runtime](https://vercel.com/docs/functions/runtimes/python)
 - [Vercel Functions e sistema de arquivos](https://vercel.com/docs/functions/runtimes)
+- [Vercel CLI](https://vercel.com/docs/cli)
+- [Vercel rewrites](https://vercel.com/docs/routing/rewrites)
+- [Vercel Storage](https://vercel.com/docs/storage)
+- [Neon — documentação](https://neon.com/docs/introduction)
+- [Psycopg 3 — documentação](https://www.psycopg.org/psycopg3/docs/)
 
 ---
 

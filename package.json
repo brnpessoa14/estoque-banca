@@ -1,0 +1,12 @@
+{
+  "name": "banca-facil",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "python3 -m unittest discover -s tests -v"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
