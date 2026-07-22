@@ -43,6 +43,7 @@ Este documento explica como instalar, usar, manter, testar e evoluir o Banca Fá
 - [Lógica da interface](app.js)
 - [Estilos e responsividade](styles.css)
 - [Testes de integração](tests/test_app.py)
+- [Modelo de variáveis de ambiente](.env.example)
 - [Download oficial do Python](https://www.python.org/downloads/)
 
 ## 2. O que o sistema faz
@@ -127,12 +128,50 @@ O endereço padrão é [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ### Requisitos
 
-- Python 3.9 ou superior;
+- Python 3.9 ou superior para o servidor local;
+- Python 3.12 para reproduzir o runtime definido em `.python-version`;
+- Node.js 22 ou superior para gerar `public/` e usar a CLI do Vercel;
 - navegador moderno, como Chrome, Edge, Firefox ou Safari;
 - espaço em disco para o banco e seus backups;
 - internet apenas para carregar a biblioteca visual do QR Code. O restante da aplicação funciona localmente.
 
-O projeto usa somente módulos da biblioteca padrão do Python. Não existe `npm install`, `pip install` ou serviço de banco obrigatório.
+O servidor local com SQLite usa somente a biblioteca padrão do Python. A API PostgreSQL e o teste de integração instalam o Psycopg a partir de `requirements.txt`; o build do Vercel usa Node.js, mas não possui dependências npm de aplicação.
+
+### Clonar em outro computador
+
+Com uma chave SSH autorizada no GitHub:
+
+```bash
+git clone git@github.com:brnpessoa14/estoque-banca.git
+cd estoque-banca
+python3 start.py
+```
+
+Como alternativa, use HTTPS:
+
+```bash
+git clone https://github.com/brnpessoa14/estoque-banca.git
+```
+
+Para preparar também a API PostgreSQL e o deploy:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+npm run build
+npx vercel@latest link
+npx vercel@latest env pull .env.local
+```
+
+No PowerShell, a ativação do ambiente é:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+`vercel link` conecta o clone ao projeto existente e `vercel env pull` baixa as variáveis para o arquivo ignorado `.env.local`. É necessário entrar em uma conta com acesso ao projeto. Se for usar outro banco, copie `.env.example` para `.env.local` e substitua apenas localmente o valor de exemplo.
 
 ### macOS
 
@@ -287,6 +326,9 @@ flowchart LR
 | [`build.mjs`](build.mjs) | Copia somente o frontend para `public/` | Ao adicionar um arquivo público |
 | [`requirements.txt`](requirements.txt) | Dependências da função Python | Ao atualizar o Psycopg |
 | [`package.json`](package.json) | Comandos de build e teste | Ao mudar a automação |
+| [`.env.example`](.env.example) | Formato seguro da variável PostgreSQL, sem segredo real | Ao adicionar uma variável obrigatória |
+| [`.agents/skills`](.agents/skills) | Orientações Neon reutilizáveis por agentes de desenvolvimento | Ao atualizar os skills instalados |
+| [`skills-lock.json`](skills-lock.json) | Origem, versão e integridade dos skills | Gerado junto com uma atualização dos skills |
 | [`start.bat`](start.bat) | Inicialização no Windows | Se o comando de inicialização mudar |
 | [`README.md`](README.md) | Apresentação e comandos essenciais | Ao mudar recursos ou requisitos |
 | [`QUICKSTART.md`](QUICKSTART.md) | Primeiro acesso resumido | Ao mudar instalação ou credenciais iniciais |
@@ -872,6 +914,23 @@ Não existe recuperação por e-mail na versão atual. Não é possível descobr
 
 ## 20. Como desenvolver novas funcionalidades
 
+### Preparar o ambiente de desenvolvimento
+
+1. Clone a `main` seguindo [Clonar em outro computador](#clonar-em-outro-computador).
+2. Inicie localmente com `python3 start.py` para mudanças de interface e API SQLite.
+3. Instale `requirements.txt` quando precisar testar PostgreSQL.
+4. Execute `npm run build` para confirmar os arquivos públicos do Vercel.
+5. Use `npx vercel@latest deploy` para criar um preview sem alterar a produção.
+6. Mantenha `DATABASE_URL` somente no Vercel ou em `.env.local` ignorado.
+
+Para trazer as alterações mais recentes antes de começar:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git switch -c agent/nome-da-mudanca
+```
+
 ### Fluxo recomendado
 
 1. Crie uma branch a partir da branch principal atualizada.
@@ -883,6 +942,13 @@ Não existe recuperação por e-mail na versão atual. Não é possível descobr
 7. Execute todos os testes.
 8. Revise `git diff --check` e os arquivos versionados.
 9. Abra um pull request com impacto e validações.
+
+Depois do merge, atualize qualquer outro computador com:
+
+```bash
+git switch main
+git pull --ff-only origin main
+```
 
 ### Adicionar uma rota
 

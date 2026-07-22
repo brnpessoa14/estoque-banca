@@ -4,9 +4,32 @@ Sistema de frente de caixa, estoque e relatórios para bancas. Pode ser usado lo
 
 **Produção:** [estoque-banca.vercel.app](https://estoque-banca.vercel.app)
 
+## Usar em outro computador
+
+Tudo que é necessário para desenvolver está versionado. Em uma máquina nova:
+
+```bash
+git clone git@github.com:brnpessoa14/estoque-banca.git
+cd estoque-banca
+python3 start.py
+```
+
+Isso inicia o modo local com SQLite, sem credenciais externas. Para trabalhar também com o deploy e o PostgreSQL:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
+python -m pip install -r requirements.txt
+npm run build
+npx vercel@latest link
+npx vercel@latest env pull .env.local
+```
+
+O acesso aos segredos depende de autenticação na mesma conta/equipe do Vercel. Use [`.env.example`](.env.example) apenas como referência e nunca envie `.env.local`, bancos, `.venv`, `.vercel` ou senhas ao GitHub.
+
 ## Começar
 
-Requisito: Python 3.9 ou superior.
+Requisito do modo local: Python 3.9 ou superior. O deploy usa Python 3.12 e Node.js 22 ou superior.
 
 ```bash
 python3 start.py
@@ -95,6 +118,8 @@ vercel.json         Build, rotas, região e cabeçalhos de segurança
 build.mjs           Gera o diretório público do deploy
 requirements.txt    Dependência Python do PostgreSQL
 tests/              Testes SQLite e PostgreSQL
+.agents/skills/      Guias versionados para ferramentas de desenvolvimento
+skills-lock.json    Versões e integridade dos skills auxiliares
 start.bat           Inicialização no Windows
 ```
 
