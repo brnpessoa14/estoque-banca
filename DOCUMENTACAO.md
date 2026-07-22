@@ -263,17 +263,17 @@ O servidor consulta novamente preços e estoques. Portanto, alterar valores envi
 
 1. Cadastre uma chave PIX em **Configurações**.
 2. Monte o carrinho.
-3. Selecione **Gerar cobrança PIX**.
+3. Selecione **Finalizar venda** e depois **PIX**.
 4. Mostre o QR Code ao cliente ou copie o código.
 5. Confirme o recebimento no aplicativo bancário.
-6. Volte ao caixa e finalize a venda com a forma de pagamento PIX.
+6. Somente após receber, selecione **Pagamento recebido** para registrar a venda e baixar o estoque.
 
 ### 5.5 Consultar relatórios
 
 1. Abra **Relatórios**.
 2. Escolha as datas inicial e final.
-3. Selecione **Aplicar período**.
-4. Para salvar os dados, use **Exportar CSV**.
+3. Os indicadores são atualizados automaticamente.
+4. Para salvar os dados, use **Exportar CSV**; o botão fica indisponível quando não há vendas no período.
 
 O arquivo CSV pode ser aberto no Excel, LibreOffice Calc ou Google Planilhas.
 
@@ -598,7 +598,7 @@ O [Manual de Padrões para Iniciação do Pix do Banco Central](https://www.bcb.
 
 ### Limitação importante
 
-O sistema gera a cobrança, mas não consulta o banco e não confirma o pagamento automaticamente. O operador deve verificar o recebimento no aplicativo bancário antes de finalizar a venda.
+O sistema gera a cobrança, mas não consulta o banco e não confirma o pagamento automaticamente. O operador deve verificar o recebimento no aplicativo bancário antes de selecionar **Pagamento recebido**. Só essa confirmação registra a venda e reduz o estoque.
 
 A imagem do QR Code usa uma biblioteca carregada do CDN jsDelivr. Sem internet, o sistema mantém o código PIX Copia e Cola, mas pode não renderizar a imagem.
 
@@ -750,7 +750,7 @@ python3 -m py_compile start.py tests/test_app.py
 2. Cadastre, edite e exclua um produto.
 3. Faça uma venda em cada forma de pagamento.
 4. Tente vender quantidade acima do estoque.
-5. Gere e leia um QR Code PIX com um aplicativo bancário sem confirmar o pagamento.
+5. Gere e leia um QR Code PIX sem confirmar; verifique que a venda não foi registrada e depois teste a confirmação de recebimento.
 6. Exporte e abra o CSV.
 7. Teste em tela de celular.
 8. Reinicie o servidor e confirme que os dados permaneceram.

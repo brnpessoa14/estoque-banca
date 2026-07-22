@@ -67,17 +67,15 @@ function bindApplication() {
   $("#stockFilter").addEventListener("change", renderInventory);
   $("#clearCartButton").addEventListener("click", clearCart);
   $("#checkoutButton").addEventListener("click", openCheckout);
-  $("#pixPreviewButton").addEventListener("click", openPixPreview);
   $("#addProductButton").addEventListener("click", () => openProductForm());
-  $("#applyReportButton").addEventListener("click", renderReports);
+  $("#reportStart").addEventListener("change", renderReports);
+  $("#reportEnd").addEventListener("change", renderReports);
   $("#exportButton").addEventListener("click", exportSales);
   $("#businessForm").addEventListener("submit", saveSettings);
   $("#passwordForm").addEventListener("submit", changePassword);
   $("#modalClose").addEventListener("click", closeModal);
   $("#appModal").addEventListener("click", (event) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const inside = event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-    if (!inside) closeModal();
+    if (event.target === event.currentTarget) closeModal();
   });
 }
 
@@ -196,6 +194,7 @@ function renderIdentity() {
   $("#userEmail").textContent = state.user?.email || "";
   $("#userAvatar").textContent = name.charAt(0).toUpperCase();
   $("#sidebarBusiness").textContent = business;
+  document.title = `${business} — Banca Fácil`;
 }
 
 function renderSummary() {
@@ -290,7 +289,7 @@ function renderCart() {
   $("#cartCount").textContent = count ? plural(count, "item", "itens") : "Nenhum item";
   $("#cartTotal").textContent = money(cartTotal());
   $("#checkoutButton").disabled = !items.length;
-  $("#pixPreviewButton").disabled = !items.length;
+  $("#clearCartButton").classList.toggle("hidden", !items.length);
   const list = $("#cartList");
   if (!items.length) {
     list.innerHTML = `<div class="cart-empty"><span aria-hidden="true">▤</span><strong>Carrinho vazio</strong><p>Clique em um produto para iniciar a venda.</p></div>`;
@@ -346,9 +345,8 @@ function openProductForm(product = null) {
     <label class="field-group"><span>Preço de venda</span><input name="price" type="number" min="0" max="1000000" step="0.01" value="${product?.price ?? ""}" required></label>
     <label class="field-group"><span>Estoque atual</span><input name="stock" type="number" min="0" max="1000000" step="1" value="${product?.stock ?? 0}" required></label>
     <label class="field-group"><span>Alerta de estoque mínimo</span><input name="minStock" type="number" min="0" max="1000000" step="1" value="${product?.minStock ?? 0}" required></label>
-  </div><div class="modal-actions"><button class="btn btn-soft" type="button" data-cancel>Cancelar</button><button class="btn btn-primary" type="submit">${editing ? "Salvar alterações" : "Adicionar produto"}</button></div>`;
+  </div><div class="modal-actions"><button class="btn btn-primary" type="submit">${editing ? "Salvar alterações" : "Adicionar produto"}</button></div>`;
   openModal(editing ? "EDITAR PRODUTO" : "NOVO PRODUTO", editing ? "Atualizar produto" : "Cadastrar produto", editing ? "Revise as informações do estoque." : "Preencha os dados para disponibilizar o item no caixa.", content);
-  $('[data-cancel]', content).addEventListener("click", closeModal);
   content.addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = $('button[type="submit"]', content);
@@ -392,7 +390,10 @@ function openCheckout() {
     ${[["pix", "PIX", "Pagamento instantâneo"], ["dinheiro", "Dinheiro", "Recebimento no caixa"], ["debito", "Cartão de débito", "Máquina de cartão"], ["credito", "Cartão de crédito", "Máquina de cartão"]].map(([value, label, help]) => `<button class="payment-option" type="button" data-payment="${value}"><strong>${label}</strong><small>${help}</small></button>`).join("")}
   </div>`;
   openModal("FECHAR VENDA", "Forma de pagamento", "O estoque será atualizado automaticamente.", content);
-  $$('[data-payment]', content).forEach((button) => button.addEventListener("click", () => finishSale(button.dataset.payment, button)));
+  $$('[data-payment]', content).forEach((button) => button.addEventListener("click", () => {
+    if (button.dataset.payment === "pix") openPixCheckout();
+    else finishSale(button.dataset.payment, button);
+  }));
 }
 
 async function finishSale(paymentMethod, button) {
@@ -414,8 +415,9 @@ async function finishSale(paymentMethod, button) {
   }
 }
 
-function openPixPreview() {
+function openPixCheckout() {
   if (!state.settings.pixKey) {
+    closeModal();
     toast("Cadastre uma chave PIX nas configurações.", "error");
     switchView("settings");
     return;
@@ -427,12 +429,13 @@ function openPixPreview() {
     amount: cartTotal(),
   });
   const content = document.createElement("div");
-  content.innerHTML = `<div class="pix-layout"><div class="qr-box" id="pixQr"><span>Gerando QR Code...</span></div><div><div class="checkout-total"><span>Valor da cobrança</span><strong>${money(cartTotal())}</strong></div><p class="pix-copy" id="pixCode">${escapeHtml(payload)}</p><div class="modal-actions"><button class="btn btn-soft" type="button" data-copy-pix>Copiar código PIX</button></div></div></div>`;
-  openModal("COBRANÇA PIX", "QR Code da venda", "O pagamento deve ser confirmado antes de fechar a venda.", content, true);
+  content.innerHTML = `<div class="pix-layout"><div class="qr-box" id="pixQr"><span>Gerando QR Code...</span></div><div class="pix-details"><div class="checkout-total"><span>Valor da cobrança</span><strong>${money(cartTotal())}</strong></div><p class="pix-instruction">Apresente o QR Code e confirme o recebimento no aplicativo bancário antes de concluir.</p><p class="pix-copy" id="pixCode">${escapeHtml(payload)}</p><div class="modal-actions pix-actions"><button class="btn btn-soft" type="button" data-copy-pix>Copiar código</button><button class="btn btn-primary" type="button" data-confirm-pix>Pagamento recebido</button></div></div></div>`;
+  openModal("COBRANÇA PIX", "Receber com PIX", "A venda só será registrada após sua confirmação.", content, true);
   $('[data-copy-pix]', content).addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(payload); toast("Código PIX copiado."); }
     catch (_) { toast("Selecione e copie o código manualmente.", "error"); }
   });
+  $('[data-confirm-pix]', content).addEventListener("click", (event) => finishSale("pix", event.currentTarget));
   const target = $("#pixQr", content);
   target.innerHTML = "";
   if (window.QRCode) {
@@ -450,6 +453,7 @@ function renderReports() {
   $("#reportRevenue").textContent = money(revenue);
   $("#reportSales").textContent = String(sales.length);
   $("#reportAverage").textContent = money(sales.length ? revenue / sales.length : 0);
+  $("#exportButton").disabled = !sales.length;
   renderPayments(sales, revenue);
   renderRanking(sales);
   renderSalesList(sales);
@@ -558,7 +562,12 @@ function switchView(view) {
   };
   if (!labels[view]) return;
   state.view = view;
-  $$('[data-view]').forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+  $$('[data-view]').forEach((button) => {
+    const active = button.dataset.view === view;
+    button.classList.toggle("active", active);
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
   $$('[data-view-panel]').forEach((panel) => panel.classList.toggle("active", panel.dataset.viewPanel === view));
   $("#viewEyebrow").textContent = labels[view][0];
   $("#viewTitle").textContent = labels[view][1];
@@ -584,7 +593,7 @@ function openModal(eyebrow, title, subtitle, content, wide = false) {
   $("#modalSubtitle").textContent = subtitle;
   $("#modalBody").replaceChildren(content);
   modal.classList.toggle("wide", wide);
-  modal.showModal();
+  if (!modal.open) modal.showModal();
   requestAnimationFrame(() => $("input[autofocus]", content)?.focus());
 }
 
