@@ -15,14 +15,14 @@
     <section class="auth-showcase" aria-label="Apresentação">
       <div class="auth-brand"><span class="brand-mark">BF</span><span>Banca Fácil</span></div>
       <div class="showcase-copy">
-        <span class="eyebrow light">GESTÃO SIMPLES, VENDA RÁPIDA</span>
-        <h1>Sua banca organizada de ponta a ponta.</h1>
-        <p>Controle o estoque, registre vendas e acompanhe seu caixa em uma experiência feita para o balcão.</p>
+        <span class="eyebrow light">CONTROLE CLARO, VENDA RÁPIDA</span>
+        <h1>Tudo o que sua banca precisa, sem complicação.</h1>
+        <p>Estoque, vendas e resultados reunidos em uma experiência rápida, segura e feita para o balcão.</p>
       </div>
       <div class="showcase-stats" aria-label="Recursos do sistema">
-        <div><strong>100%</strong><span>Dados locais</span></div>
-        <div><strong>24/7</strong><span>Pronto para vender</span></div>
-        <div><strong>1 clique</strong><span>Para fechar a venda</span></div>
+        <div><strong>Estoque</strong><span>Atualizado a cada venda</span></div>
+        <div><strong>Caixa</strong><span>Visão clara do dia</span></div>
+        <div><strong>Relatórios</strong><span>Decisões com dados</span></div>
       </div>
     </section>
 
@@ -79,7 +79,7 @@
           <span><strong>Experimentar conta de demonstração</strong><small>Dados e produtos já preparados</small></span>
           <span aria-hidden="true">→</span>
         </button>
-        <p class="auth-footnote">Seus dados ficam no banco local desta instalação.</p>
+        <p class="auth-footnote"><span aria-hidden="true">●</span> Acesso seguro e dados separados por conta.</p>
       </div>
     </main>
   </div>
@@ -97,7 +97,7 @@
       </nav>
       <div class="sidebar-footer">
         <div class="user-chip"><span class="avatar" id="userAvatar">C</span><span><strong id="userName">Cliente</strong><small id="userEmail">cliente@email.com</small></span></div>
-        <button class="icon-btn" id="logoutButton" type="button" title="Sair" aria-label="Sair da conta">↪</button>
+        <button class="icon-btn" id="logoutButton" type="button" title="Sair" aria-label="Sair da conta">⏻</button>
       </div>
     </aside>
 
@@ -108,7 +108,6 @@
           <div><span class="eyebrow" id="viewEyebrow">OPERAÇÃO</span><h1 id="viewTitle">Frente de caixa</h1></div>
         </div>
         <div class="topbar-actions">
-          <div class="live-status"><span></span>Banco conectado</div>
           <div class="date-chip" id="currentDate"></div>
         </div>
       </header>
@@ -131,12 +130,11 @@
           </section>
 
           <aside class="cart-panel surface">
-            <div class="section-head cart-head"><div><h2>Venda atual</h2><p id="cartCount">Nenhum item</p></div><button class="text-button danger-text" id="clearCartButton" type="button">Limpar</button></div>
+            <div class="section-head cart-head"><div><h2>Venda atual</h2><p id="cartCount">Nenhum item</p></div><button class="text-button danger-text hidden" id="clearCartButton" type="button">Esvaziar</button></div>
             <div class="cart-list" id="cartList"></div>
             <div class="cart-footer">
               <div class="total-row"><span>Total</span><strong id="cartTotal">R$ 0,00</strong></div>
               <button class="btn btn-primary btn-large" id="checkoutButton" type="button" disabled><span>Finalizar venda</span><span aria-hidden="true">→</span></button>
-              <button class="btn btn-soft" id="pixPreviewButton" type="button" disabled>Gerar cobrança PIX</button>
             </div>
           </aside>
         </div>
@@ -165,7 +163,7 @@
 
       <section class="view" id="reportsView" data-view-panel="reports">
         <div class="page-actions"><div><h2>Relatórios</h2><p>Entenda o desempenho da banca e acompanhe as movimentações.</p></div><button class="btn btn-soft" id="exportButton" type="button">↓ Exportar CSV</button></div>
-        <div class="report-filters"><label>De <input id="reportStart" type="date"></label><label>Até <input id="reportEnd" type="date"></label><button class="btn btn-dark" id="applyReportButton" type="button">Aplicar período</button></div>
+        <div class="report-filters"><label>De <input id="reportStart" type="date"></label><label>Até <input id="reportEnd" type="date"></label><span class="filter-hint"><span aria-hidden="true">●</span> Atualização automática</span></div>
         <div class="summary-grid compact report-metrics">
           <article class="metric-card"><small>Faturamento</small><strong id="reportRevenue">R$ 0,00</strong><span>no período</span></article>
           <article class="metric-card"><small>Vendas</small><strong id="reportSales">0</strong><span>atendimentos</span></article>
