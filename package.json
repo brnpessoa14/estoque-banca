@@ -1,19 +1,12 @@
 {
-  "name": "pdv-banca",
+  "name": "banca-facil",
+  "private": true,
   "version": "1.0.0",
-  "description": "PDV para Banca de Jornal com Supabase + OAuth + RLS",
-  "main": "index.html",
   "scripts": {
-    "serve": "http-server -p 8000 -c-1",
-    "dev": "http-server -p 8000 -c-1 -o"
+    "build": "node build.mjs",
+    "test": "python3 -m unittest discover -s tests -v"
   },
-  "keywords": ["pdv", "banca", "supabase", "oauth"],
-  "author": "",
-  "license": "MIT",
-  "devDependencies": {
-    "http-server": "^14.1.1"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.38.0"
+  "engines": {
+    "node": ">=22"
   }
 }

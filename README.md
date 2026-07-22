@@ -1,116 +1,101 @@
-# PDV Banca de Jornal
+# Banca Fácil
 
-Sistema de Ponto de Venda para Bancas com suporte a estoque, relatórios, PIX QR Code e sincronização com Supabase.
+Sistema de frente de caixa, estoque e relatórios para bancas. Pode ser usado localmente com Python e SQLite ou publicado no Vercel com Python Functions e PostgreSQL Neon. A aplicação inclui autenticação e isolamento completo dos dados por conta.
 
-## 🚀 Início Rápido
+**Produção:** [estoque-banca.vercel.app](https://estoque-banca.vercel.app)
 
-### Opção 1: Executar Offline (localStorage apenas)
+## Começar
 
-**Sem Supabase** - dados salvos apenas no navegador (útil para teste rápido):
-
-```bash
-# Windows: abrir em PowerShell
-cd c:\estoque-banca
-# Depois abra index.html no navegador (duplo clique ou arraste para o navegador)
-```
-
-Ou use um servidor local:
+Requisito: Python 3.9 ou superior.
 
 ```bash
-# Python 3
-python -m http.server 8000
-
-# Depois acesse: http://localhost:8000
+python3 start.py
 ```
 
-### Opção 2: Com Supabase (recomendado para produção)
+O navegador abre em `http://127.0.0.1:8000`. No Windows, também é possível executar `start.bat`.
 
-1. **Criar projeto Supabase**: https://app.supabase.com → New project
+### Conta de demonstração
 
-2. **Configurar banco de dados**:
-   - Dashboard → SQL Editor → New Query
-   - Cole o conteúdo de `supabase-setup.sql` e execute
+- E-mail: `cliente@bancafacil.com.br`
+- Senha: `Cliente@123`
 
-3. **Configurar OAuth**:
-   - Dashboard → Authentication → Providers → Google (ou GitHub)
-   - Configure credenciais e adicione redirect URL
+A conta é criada automaticamente na primeira inicialização, junto com seis produtos de exemplo. Para uma instalação real, entre na conta demo e troque a senha em **Configurações**, ou crie uma conta separada pela tela inicial.
 
-4. **Atualizar credenciais**:
-   - Abra `index.html` no editor
-   - Localize (linhas ~780):
-     ```javascript
-     const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co'
-     const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY'
-     ```
-   - Substitua com valores do seu Dashboard → Settings → API
+## Funcionalidades
 
-5. **Executar**:
-   ```bash
-   cd c:\estoque-banca
-   npm install  # Instala dependências (http-server, Supabase JS)
-   npm run serve  # Abre servidor em http://localhost:8000
-   ```
+- Cadastro e login com sessão protegida por cookie HttpOnly;
+- dados completamente isolados por conta;
+- catálogo com busca, categorias e alerta de estoque;
+- carrinho com controle de quantidade e validação do saldo disponível;
+- fechamento por PIX, dinheiro, débito ou crédito;
+- baixa de estoque e gravação da venda em uma única transação;
+- cadastro, edição e exclusão de produtos;
+- QR Code e código PIX Copia e Cola;
+- indicadores diários, ranking, histórico e auditoria;
+- filtro por período e exportação de vendas em CSV;
+- configurações da banca, PIX e WhatsApp;
+- alteração segura de senha;
+- interface responsiva para computador, tablet e celular.
 
-6. **Testar**:
-   - Clique **ENTRAR** para fazer login com Google/GitHub
-   - Clique **SINCRONIZAR** → OK para enviar dados locais ao Supabase
-   - Dashboard Supabase → Table Editor → verifique dados sincronizados
+## Bancos de dados
 
-## 📋 Funcionalidades
+No uso local, o SQLite é inicializado automaticamente em `data/banca.sqlite3`. No Vercel, a função em `api/index.py` usa PostgreSQL Neon pela variável secreta `DATABASE_URL`. Os dois schemas contêm usuários, sessões, produtos, vendas, itens, configurações e atividades. Senhas usam PBKDF2-HMAC-SHA256 com salt individual; tokens de sessão são aleatórios e somente o hash é persistido.
 
-- ✅ **Carrinho de vendas** — adicione/remova produtos
-- ✅ **Categorias** — organize produtos por tipo
-- ✅ **Estoque** — controle quantidades e alertas
-- ✅ **PIX QR Code** — gere QR Code com valor da venda
-- ✅ **Relatórios** — vendas por período, produtos top, histórico
-- ✅ **Configurações** — nome banca, chave PIX, cidade
-- ✅ **Auth OAuth** — login seguro com Supabase (Supabase apenas)
-- ✅ **Sincronização** — localStorage ↔ Supabase (Supabase apenas)
+O arquivo do banco não é versionado para evitar publicar dados de clientes. Para fazer backup:
 
-## 🔐 Segurança
+1. encerre o servidor;
+2. copie `data/banca.sqlite3` para um local seguro;
+3. para restaurar, devolva a cópia ao mesmo caminho antes de iniciar.
 
-- **Offline**: dados salvos em `localStorage` (não sincronizado)
-- **Online**: usa `anon` key (segura), RLS protege dados por usuário
-- **Nunca** coloque `service_role` no client
+É possível escolher outro arquivo:
 
-## 📁 Estrutura
-
-```
-index.html                      # App SPA (tudo em um arquivo)
-supabase-setup.sql              # SQL para criar tabelas + RLS
-supabase-browser.js             # Helpers de auth/sync (alternativa ao integrado)
-supabase-client-example.js      # Exemplos de uso das APIs
-SUPABASE_README.md              # Guia detalhado Supabase
-package.json                    # Dependências (Node/npm)
+```bash
+python3 start.py --db /caminho/seguro/minha-banca.sqlite3
 ```
 
-## 💡 Modo Offline vs Online
+## Testes
 
-| Recurso | Offline | Online (Supabase) |
-|---------|---------|-------------------|
-| Vender | ✅ | ✅ |
-| Estoque | ✅ | ✅ |
-| PIX | ✅ | ✅ |
-| Login | ❌ | ✅ |
-| Sincronização | ❌ | ✅ |
-| RLS / Isolamento | ❌ | ✅ |
-| Backup Automático | ❌ | ✅ |
+```bash
+python3 -m unittest discover -s tests -v
+```
 
-## 🐛 Troubleshooting
+Os testes cobrem saúde da API, proteção de rotas, conta demo, credenciais inválidas, criação de conta, CRUD de produto, venda e baixa transacional, estoque insuficiente, isolamento entre clientes, configurações, troca de senha e logout. O teste PostgreSQL é executado quando `DATABASE_URL` está definida.
 
-**"Supabase não está configurado"**
-- Verifique se `SUPABASE_URL` e `SUPABASE_ANON_KEY` estão preenchidos em `index.html`
-- Se não quiser Supabase, ignore — o app funciona com `localStorage` normalmente
+## Deploy no Vercel
 
-**"Erro ao entrar (OAuth)"**
-- Verifique se Google/GitHub OAuth está configurado no Supabase
-- Teste redirect URL: deve ser `https://YOUR_PROJECT_ID.supabase.co/auth/v1/callback`
+O projeto já contém `vercel.json`, build restrito aos arquivos públicos e API Python serverless. O PostgreSQL deve estar conectado aos ambientes Development, Preview e Production.
 
-**"Dados não sincronizam"**
-- Verifique políticas RLS em `supabase-setup.sql`
-- Confirme que o usuário está logado (botão deve dizer "SAIR")
-- Abra DevTools (F12) → Console para erros detalhados
+```bash
+vercel pull
+vercel deploy          # preview
+vercel deploy --prod   # produção manual
+```
 
-## 📞 Suporte
+O fluxo normal é fazer push de uma branch, validar o preview e mesclar na `main`; a integração Git do Vercel publica a produção automaticamente. Consulte o passo a passo e a manutenção do banco em [DOCUMENTACAO.md](DOCUMENTACAO.md#18-publicação-e-produção).
 
-Consulte `SUPABASE_README.md` para guia passo a passo ou abra o console do navegador (F12) para logs.
+## Opções do servidor
+
+```bash
+python3 start.py --help
+python3 start.py --no-browser
+python3 start.py --port 9000
+```
+
+Por segurança, o servidor escuta somente em `127.0.0.1` por padrão e expõe apenas os três arquivos públicos da interface. Para acesso em rede, use `--host 0.0.0.0` apenas em uma rede confiável. Uma publicação na internet exige proxy reverso com HTTPS, monitoramento e estratégia de backup.
+
+## Estrutura
+
+```text
+index.html          Interface e estrutura das telas
+styles.css          Sistema visual e responsividade
+app.js              Estado da interface e integração com a API
+start.py            Servidor HTTP, API, autenticação e SQLite
+api/index.py        Function serverless e adaptação PostgreSQL
+vercel.json         Build, rotas, região e cabeçalhos de segurança
+build.mjs           Gera o diretório público do deploy
+requirements.txt    Dependência Python do PostgreSQL
+tests/              Testes SQLite e PostgreSQL
+start.bat           Inicialização no Windows
+```
+
+Consulte [QUICKSTART.md](QUICKSTART.md) para um roteiro curto de primeira utilização e [DOCUMENTACAO.md](DOCUMENTACAO.md) para instalação, arquitetura, banco, API, segurança, backup, testes, produção e solução de problemas.
